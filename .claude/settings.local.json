@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(markitdown \"/Users/stivenariza/Downloads/Modelo_Financiero_Mensual_y_Anual V2.xlsx\")",
+      "Bash(python3)",
+      "Bash(pip install *)",
+      "Bash(python3 -c \"import sys; print\\(sys.executable\\); import site; print\\(site.getsitepackages\\(\\)\\)\")",
+      "Bash(python3 -m pip install pandas openpyxl --quiet)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
+      "Bash(awk '/^\\\\.mobile-menu-toggle/,/^[^[:space:]]/ {print NR\": \"$0}' /Volumes/BackUp/sites/personal-finances/styles.css)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git config *)",
+      "Bash(git add *)"
+    ]
+  }
+}

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Firebase - Guía Paso a Paso</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .step {
+            margin-bottom: 40px;
+            border-left: 4px solid #667eea;
+            padding-left: 25px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: bold;
+            margin-left: -45px;
+            margin-right: 15px;
+        }
+        .step h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .step p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .step ol, .step ul {
+            margin-left: 20px;
+            color: #666;
+            line-height: 1.8;
+        }
+        .step li {
+            margin-bottom: 8px;
+        }
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            color: #333;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        .btn-secondary:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #155724;
+        }
+        .footer {
+            background: #f9f9f9;
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .screenshot {
+            width: 100%;
+            max-width: 500px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Crear tu Base de Datos Firebase</h1>
+            <p>Guía paso a paso para conectar la app con tu propia instancia de Firebase</p>
+        </div>
+
+        <div class="content">
+            <div class="step">
+                <span class="step-number">1</span>
+                <h3>Ir a Firebase</h3>
+                <p>Abre <a href="https://firebase.google.com" target="_blank">firebase.google.com</a> en tu navegador</p>
+                <ol>
+                    <li>Haz clic en <span class="highlight">Ir a la consola</span></li>
+                    <li>Si no tienes una cuenta de Google, crea una</li>
+                    <li>Inicia sesión con tu cuenta</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <h3>Crear Nuevo Proyecto</h3>
+                <ol>
+                    <li>Haz clic en <span class="highlight">Agregar proyecto</span></li>
+                    <li>Dale un nombre (ej: "Mis Finanzas")</li>
+                    <li>Desmarca <span class="highlight">"Habilitar Google Analytics"</span> (opcional)</li>
+                    <li>Haz clic en <span class="highlight">Crear proyecto</span></li>
+                </ol>
+                <p style="margin-top: 15px; color: #28a745; font-weight: 600;">⏳ Espera a que se cree (1-2 minutos)</p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <h3>Ir a Firestore Database</h3>
+                <ol>
+                    <li>En la consola de Firebase, en el menú izquierdo, haz clic en <span class="highlight">Firestore Database</span></li>
+                    <li>Haz clic en <span class="highlight">Crear base de datos</span></li>
+                    <li>Selecciona: <span class="highlight">Iniciar en modo de prueba</span></li>
+                    <li>Elige la región más cercana a ti</li>
+                    <li>Haz clic en <span class="highlight">Crear</span></li>
+                </ol>
+                <div class="warning">
+                    <strong>⚠️ Modo de prueba:</strong> Permite que cualquiera lea/escriba. Lo cambiaremos después.
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">4</span>
+                <h3>Obtener tu API Key</h3>
+                <ol>
+                    <li>En la consola, haz clic en el ícono de <span class="highlight">⚙️ (Configuración)</span> arriba a la izquierda</li>
+                    <li>Selecciona <span class="highlight">Configuración del proyecto</span></li>
+                    <li>Ve a la pestaña <span class="highlight">General</span></li>
+                    <li>Baja hasta <span class="highlight">Tu app web</span></li>
+                    <li>Si no ves nada, haz clic en <span class="highlight">Agregar app</span></li>
+                    <li>Selecciona <span class="highlight">Web</span></li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <span class="step-number">5</span>
+                <h3>Copiar tu API Key</h3>
+                <p>Después de agregar la app, verás un código JavaScript como este:</p>
+                <div class="code-block">
+const firebaseConfig = {<br>
+&nbsp;&nbsp;apiKey: "AIzaSyD... ← <span class="highlight">COPIA ESTE</span>",<br>
+&nbsp;&nbsp;authDomain: "...",<br>
+&nbsp;&nbsp;projectId: "...",<br>
+&nbsp;&nbsp;storageBucket: "...",<br>
+&nbsp;&nbsp;messagingSenderId: "...",<br>
+&nbsp;&nbsp;appId: "..."<br>
+};
+                </div>
+                <p><strong>🔑 Tu API Key está en la línea que dice <span class="highlight">apiKey</span></strong></p>
+                <p style="color: #e74c3c; margin-top: 10px;">⚠️ No compartas esta API Key públicamente (ej: en GitHub)</p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">6</span>
+                <h3>Habilitar Authentication Anónima</h3>
+                <ol>
+                    <li>En la consola de Firebase, en el menú izquierdo, haz clic en <span class="highlight">Authentication</span></li>
+                    <li>Haz clic en <span class="highlight">Comenzar</span> o <span class="highlight">Get started</span></li>
+                    <li>Selecciona <span class="highlight">Anónima</span> como método de autenticación</li>
+                    <li>Activa el interruptor</li>
+                    <li>Haz clic en <span class="highlight">Guardar</span></li>
+                </ol>
+                <div class="success">
+                    <strong>✅ Authentication está listo para que tu app funcione</strong>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">7</span>
+                <h3>Configurar Reglas de Seguridad (Importante)</h3>
+                <ol>
+                    <li>En Firestore Database, ve a la pestaña <span class="highlight">Reglas</span></li>
+                    <li>Reemplaza el código con esto:</li>
+                </ol>
+                <div class="code-block">
+rules_version = '2';<br>
+service cloud.firestore {<br>
+&nbsp;&nbsp;match /databases/{database}/documents {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;match /users/{userId}/{document=**} {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth.uid == userId;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+                </div>
+                <ol start="3">
+                    <li>Haz clic en <span class="highlight">Publicar</span></li>
+                </ol>
+                <div class="success">
+                    <strong>✅ Ahora solo cada usuario puede ver sus propios datos</strong>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">8</span>
+                <h3>Configurar la App</h3>
+                <ol>
+                    <li>Abre la app</li>
+                    <li>Ve a <span class="highlight">Configuración</span></li>
+                    <li>En la sección <span class="highlight">🔥 Configuración Firebase</span></li>
+                    <li>Ingresa todos los valores de tu proyecto Firebase:
+                        <ul style="margin-top: 8px; margin-left: 20px;">
+                            <li>API Key</li>
+                            <li>Project ID</li>
+                            <li>Auth Domain</li>
+                            <li>Storage Bucket</li>
+                            <li>Messaging Sender ID</li>
+                            <li>App ID</li>
+                        </ul>
+                    </li>
+                    <li>Haz clic en <span class="highlight">Guardar Configuración</span></li>
+                    <li>Haz clic en <span class="highlight">Probar Conexión</span></li>
+                </ol>
+                <div class="success">
+                    <strong>✅ Si ves "Conexión exitosa", ¡todo funciona!</strong>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <a href="https://firebase.google.com" target="_blank" class="btn btn-primary">Ir a Firebase</a>
+                <button onclick="window.close()" class="btn btn-secondary">Cerrar Guía</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>💡 <strong>Tip:</strong> Puedes cambiar tu API Key en cualquier momento desde Configuración</p>
+            <p style="margin-top: 10px;">¿Preguntas? Abre la consola (F12) para ver mensajes de error</p>
+        </div>
+    </div>
+</body>
+</html>
