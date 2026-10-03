@@ -869,11 +869,28 @@ function renderAccountsList() {
 }
 
 window.deleteAccount = function(accountId) {
-    if (confirm('¿Eliminar esta cuenta?')) {
-        APP.data.accounts = APP.data.accounts.filter(a => a.id !== accountId);
-        saveDataToStorage();
-        renderAccounts();
-        renderAccountsList();
+    const account = APP.data.accounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    const confirmed = confirm(`¿Eliminar la cuenta "${account.name}"?`);
+    if (!confirmed) {
+        console.log('Eliminación cancelada');
+        return;
+    }
+
+    APP.data.accounts = APP.data.accounts.filter(a => a.id !== accountId);
+    renderAccountsList();
+    renderAccounts();
+
+    if (window.firebaseDB) {
+        window.firebaseDB.deleteData('accounts', accountId)
+            .catch(err => {
+                console.error('Error eliminando de Firebase:', err);
+                APP.data.accounts.push(account);
+                renderAccountsList();
+                renderAccounts();
+                alert('⚠️ Error al eliminar. La operación fue revertida.');
+            });
     }
 }
 
@@ -922,11 +939,28 @@ function renderCategoriesList() {
 }
 
 window.deleteCategory = function(categoryId) {
-    if (confirm('¿Eliminar esta categoría?')) {
-        APP.data.categories = APP.data.categories.filter(c => c.id !== categoryId);
-        saveDataToStorage();
-        renderCategories();
-        renderCategoriesList();
+    const category = APP.data.categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    const confirmed = confirm(`¿Eliminar la categoría "${category.name}"?`);
+    if (!confirmed) {
+        console.log('Eliminación cancelada');
+        return;
+    }
+
+    APP.data.categories = APP.data.categories.filter(c => c.id !== categoryId);
+    renderCategoriesList();
+    renderCategories();
+
+    if (window.firebaseDB) {
+        window.firebaseDB.deleteData('categories', categoryId)
+            .catch(err => {
+                console.error('Error eliminando de Firebase:', err);
+                APP.data.categories.push(category);
+                renderCategoriesList();
+                renderCategories();
+                alert('⚠️ Error al eliminar. La operación fue revertida.');
+            });
     }
 }
 
