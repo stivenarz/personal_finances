@@ -83,15 +83,17 @@ export async function initializeAuth() {
 // ============ DATA OPERATIONS ============
 export async function saveData(collectionName, data) {
   if (!currentUser) throw new Error('Usuario no autenticado');
+  if (!data.id) throw new Error('El documento debe tener un ID');
 
   try {
     const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-    const docRef = await addDoc(collection(db, userCollectionPath), {
+    const docRef = doc(db, userCollectionPath, data.id);
+    await setDoc(docRef, {
       ...data,
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    return { id: docRef.id, ...data };
+    return data;
   } catch (error) {
     console.error('Error guardando datos:', error);
     throw error;
