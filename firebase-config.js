@@ -147,6 +147,29 @@ export async function deleteData(collectionName, docId) {
   }
 }
 
+// ============ MIGRATION ============
+export async function cleanOldData() {
+  if (!currentUser) throw new Error('Usuario no autenticado');
+
+  console.log('🧹 Limpiando datos antiguos...');
+  const collections = ['transactions', 'debts', 'accounts', 'categories', 'goals', 'debtPayments'];
+
+  for (const collectionName of collections) {
+    try {
+      const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
+      const querySnapshot = await getDocs(collection(db, userCollectionPath));
+
+      for (const doc of querySnapshot.docs) {
+        await deleteDoc(doc.ref);
+      }
+
+      console.log(`✓ Limpiada colección: ${collectionName}`);
+    } catch (error) {
+      console.error(`Error limpiando ${collectionName}:`, error);
+    }
+  }
+}
+
 // ============ SYNC ALL DATA ============
 export async function loadAllData() {
   if (!currentUser) throw new Error('Usuario no autenticado');

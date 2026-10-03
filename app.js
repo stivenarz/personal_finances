@@ -32,6 +32,10 @@ async function initApp() {
             await fb.initializeAuth();
             console.log('Autenticación completada');
 
+            // Limpiar datos antiguos (migración)
+            await fb.cleanOldData();
+            console.log('Datos antiguos limpiados');
+
             // Cargar datos desde Firebase
             const allData = await fb.loadAllData();
             APP.data = allData;
