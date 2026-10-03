@@ -733,24 +733,58 @@ function registerDebtPayment(debtId) {
     }
 }
 
-window.deleteDebt = function(debtId) {
-    if (confirm('¿Eliminar esta deuda?')) {
-        APP.data.debts = APP.data.debts.filter(d => d.id !== debtId);
-        saveDataToStorage();
-        updateDashboard();
-        renderDebtsList();
+window.deleteDebt = async function(debtId) {
+    const debt = APP.data.debts.find(d => d.id === debtId);
+    if (!debt) return;
+
+    const confirmed = confirm(`¿Eliminar la deuda "${debt.description || 'Sin nombre'}"?`);
+    if (!confirmed) return;
+
+    APP.data.debts = APP.data.debts.filter(d => d.id !== debtId);
+    updateDashboard();
+    renderDebtsList();
+
+    if (window.firebaseDB) {
+        try {
+            await window.firebaseDB.deleteData('debts', debtId);
+            console.log('✅ Deuda eliminada de Firebase:', debtId);
+        } catch (err) {
+            console.error('❌ Error eliminando deuda:', err);
+            APP.data.debts.push(debt);
+            updateDashboard();
+            renderDebtsList();
+            alert('⚠️ Error al eliminar: ' + err.message);
+        }
     }
 }
 
 // ============ TRANSACTIONS ============
-window.deleteTransaction = function(transId) {
-    if (confirm('¿Eliminar esta transacción?')) {
-        APP.data.transactions = APP.data.transactions.filter(t => t.id !== transId);
-        saveDataToStorage();
-        updateDashboard();
-        renderExpensesList();
-        renderIncomeList();
-        renderTransactionsList();
+window.deleteTransaction = async function(transId) {
+    const transaction = APP.data.transactions.find(t => t.id === transId);
+    if (!transaction) return;
+
+    const confirmed = confirm(`¿Eliminar la transacción de ${transaction.type === 'Egreso' ? 'gasto' : 'ingreso'}?`);
+    if (!confirmed) return;
+
+    APP.data.transactions = APP.data.transactions.filter(t => t.id !== transId);
+    updateDashboard();
+    renderExpensesList();
+    renderIncomeList();
+    renderTransactionsList();
+
+    if (window.firebaseDB) {
+        try {
+            await window.firebaseDB.deleteData('transactions', transId);
+            console.log('✅ Transacción eliminada de Firebase:', transId);
+        } catch (err) {
+            console.error('❌ Error eliminando transacción:', err);
+            APP.data.transactions.push(transaction);
+            updateDashboard();
+            renderExpensesList();
+            renderIncomeList();
+            renderTransactionsList();
+            alert('⚠️ Error al eliminar: ' + err.message);
+        }
     }
 }
 
@@ -868,7 +902,7 @@ function renderAccountsList() {
     `).join('');
 }
 
-window.deleteAccount = function(accountId) {
+window.deleteAccount = async function(accountId) {
     const account = APP.data.accounts.find(a => a.id === accountId);
     if (!account) return;
 
@@ -883,14 +917,16 @@ window.deleteAccount = function(accountId) {
     renderAccounts();
 
     if (window.firebaseDB) {
-        window.firebaseDB.deleteData('accounts', accountId)
-            .catch(err => {
-                console.error('Error eliminando de Firebase:', err);
-                APP.data.accounts.push(account);
-                renderAccountsList();
-                renderAccounts();
-                alert('⚠️ Error al eliminar. La operación fue revertida.');
-            });
+        try {
+            await window.firebaseDB.deleteData('accounts', accountId);
+            console.log('✅ Cuenta eliminada de Firebase:', accountId);
+        } catch (err) {
+            console.error('❌ Error eliminando de Firebase:', err);
+            APP.data.accounts.push(account);
+            renderAccountsList();
+            renderAccounts();
+            alert('⚠️ Error al eliminar: ' + err.message);
+        }
     }
 }
 
@@ -938,7 +974,7 @@ function renderCategoriesList() {
     `).join('');
 }
 
-window.deleteCategory = function(categoryId) {
+window.deleteCategory = async function(categoryId) {
     const category = APP.data.categories.find(c => c.id === categoryId);
     if (!category) return;
 
@@ -953,14 +989,16 @@ window.deleteCategory = function(categoryId) {
     renderCategories();
 
     if (window.firebaseDB) {
-        window.firebaseDB.deleteData('categories', categoryId)
-            .catch(err => {
-                console.error('Error eliminando de Firebase:', err);
-                APP.data.categories.push(category);
-                renderCategoriesList();
-                renderCategories();
-                alert('⚠️ Error al eliminar. La operación fue revertida.');
-            });
+        try {
+            await window.firebaseDB.deleteData('categories', categoryId);
+            console.log('✅ Categoría eliminada de Firebase:', categoryId);
+        } catch (err) {
+            console.error('❌ Error eliminando de Firebase:', err);
+            APP.data.categories.push(category);
+            renderCategoriesList();
+            renderCategories();
+            alert('⚠️ Error al eliminar: ' + err.message);
+        }
     }
 }
 
@@ -1001,12 +1039,28 @@ function renderGoalsList() {
     }).join('');
 }
 
-window.deleteGoal = function(goalId) {
-    if (confirm('¿Eliminar esta meta?')) {
-        APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
-        saveDataToStorage();
-        renderGoalsList();
-        updateDashboard();
+window.deleteGoal = async function(goalId) {
+    const goal = APP.data.goals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    const confirmed = confirm(`¿Eliminar la meta "${goal.name}"?`);
+    if (!confirmed) return;
+
+    APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
+    renderGoalsList();
+    updateDashboard();
+
+    if (window.firebaseDB) {
+        try {
+            await window.firebaseDB.deleteData('goals', goalId);
+            console.log('✅ Meta eliminada de Firebase:', goalId);
+        } catch (err) {
+            console.error('❌ Error eliminando meta:', err);
+            APP.data.goals.push(goal);
+            renderGoalsList();
+            updateDashboard();
+            alert('⚠️ Error al eliminar: ' + err.message);
+        }
     }
 }
 
