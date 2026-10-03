@@ -47,7 +47,7 @@ async function initApp() {
     // loadGSheetConfig();
     // setupGSheetEventListeners();
 
-    initializeDefaultData();
+    await initializeDefaultData();
     setupEventListeners();
     setupMobileMenu();
 
@@ -138,16 +138,29 @@ function saveGSheetConfig(scriptUrl) {
     }, 1000);
 }
 
-function initializeDefaultData() {
-    if (APP.data.accounts.length === 0) {
+async function initializeDefaultData() {
+    const accountsLoaded = APP.data.accounts.length > 0;
+    const categoriesLoaded = APP.data.categories.length > 0;
+
+    if (!accountsLoaded) {
         APP.data.accounts = [
             { id: 'acc-001', name: 'Ahorros', type: 'Ahorros' },
             { id: 'acc-002', name: 'Corriente', type: 'Corriente' },
             { id: 'acc-003', name: 'Efectivo', type: 'Efectivo' }
         ];
+        // Guardar cuentas por defecto en Firebase
+        if (window.firebaseDB) {
+            for (const account of APP.data.accounts) {
+                try {
+                    await window.firebaseDB.saveData('accounts', account);
+                } catch (err) {
+                    console.error('Error guardando cuenta por defecto:', err);
+                }
+            }
+        }
     }
 
-    if (APP.data.categories.length === 0) {
+    if (!categoriesLoaded) {
         APP.data.categories = [
             { id: 'cat-001', name: 'Alimentación', type: 'Egreso', budget: 1000000 },
             { id: 'cat-002', name: 'Transporte', type: 'Egreso', budget: 80000 },
@@ -159,9 +172,17 @@ function initializeDefaultData() {
             { id: 'cat-008', name: 'Nómina', type: 'Ingreso', budget: 8948840 },
             { id: 'cat-009', name: 'Extras', type: 'Ingreso', budget: 1500000 }
         ];
+        // Guardar categorías por defecto en Firebase
+        if (window.firebaseDB) {
+            for (const category of APP.data.categories) {
+                try {
+                    await window.firebaseDB.saveData('categories', category);
+                } catch (err) {
+                    console.error('Error guardando categoría por defecto:', err);
+                }
+            }
+        }
     }
-
-    saveDataToStorage();
 }
 
 async function saveDataToStorage() {
