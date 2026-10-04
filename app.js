@@ -783,12 +783,31 @@ function renderExpensesList() {
 
     const container = document.getElementById('list-gastos');
     container.innerHTML = expenses.map(exp => {
-        const cat = APP.data.categories.find(c => c.id === exp.category);
+        let categoryName = 'N/A';
+
+        // Try to find category by ID
+        if (exp.category && exp.category.startsWith('cat-')) {
+            const cat = APP.data.categories.find(c => c.id === exp.category);
+            if (cat) categoryName = cat.name;
+        } else if (exp.category) {
+            // If category is not an ID, use it directly
+            categoryName = exp.category;
+        } else {
+            // If no category, extract from description
+            if (exp.description.startsWith('Pago de deuda:')) {
+                categoryName = 'Pago de deuda';
+            } else if (exp.description.startsWith('Abono a meta:')) {
+                categoryName = 'Abono a meta';
+            } else if (exp.description.startsWith('Traslado:')) {
+                categoryName = 'Traslado';
+            }
+        }
+
         return `
             <div class="transaction-item egreso">
                 <div class="transaction-date">${new Date(exp.date).toLocaleDateString()}</div>
                 <div class="transaction-desc">${exp.description || 'Sin descripción'}</div>
-                <div class="transaction-category">${cat?.name || 'N/A'}</div>
+                <div class="transaction-category">${categoryName}</div>
                 <div class="transaction-amount negativo">-$${formatNumber(exp.amount)}</div>
                 <button class="btn btn-danger" onclick="deleteTransaction('${exp.id}')">Eliminar</button>
             </div>
