@@ -64,6 +64,8 @@ function updateDatabaseModeStatus() {
     const statusEl = document.getElementById('db-mode-status');
     const syncBtn = document.getElementById('sync-data-btn');
 
+    if (!statusEl) return;
+
     if (APP.isOnline) {
         statusEl.textContent = '🔵 Usando Firebase (Nube)';
         if (syncBtn) syncBtn.style.display = 'none';
