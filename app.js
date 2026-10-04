@@ -395,6 +395,20 @@ function setupSyncButton() {
         syncBtn.textContent = '⏳ Sincronizando...';
 
         try {
+            // Verify Firebase is configured
+            if (!window.firebaseDB.isFirebaseConfigured()) {
+                throw new Error('Firebase no está configurado');
+            }
+
+            // Initialize Firebase if not already done
+            const initialized = window.firebaseDB.initializeFirebase();
+            if (!initialized) {
+                throw new Error('No se pudo inicializar Firebase');
+            }
+
+            // Initialize authentication
+            await window.firebaseDB.initializeAuth();
+
             // Save current data to Firebase
             const collections = ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals'];
 
@@ -413,8 +427,8 @@ function setupSyncButton() {
             APP.isOnline = true;
             updateDatabaseModeStatus();
         } catch (error) {
-            console.error('Error en sincronización:', error);
-            showNotification('❌ Error en sincronización: ' + error.message, 'warning');
+            console.error('Sync error:', error);
+            showNotification('❌ Error: ' + error.message, 'warning');
             syncBtn.textContent = '🔄 Sincronizar';
         } finally {
             syncBtn.disabled = false;
