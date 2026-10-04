@@ -3,25 +3,31 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/fireba
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, setDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
-// Firebase config defaults (compartida)
-const DEFAULT_CONFIG = {
-  apiKey: "AIzaSyDwhp9OFmc37-tBx1A1YOa-Squ4YgmN748",
-  authDomain: "personalfinances-88752.firebaseapp.com",
-  projectId: "personalfinances-88752",
-  storageBucket: "personalfinances-88752.firebasestorage.app",
-  messagingSenderId: "476766925228",
-  appId: "1:476766925228:web:b608abe3314d5021bb0a09"
-};
+// IMPORTANT: NO DEFAULT CONFIG - Each user must configure their own Firebase
+// Credentials are stored ONLY in localStorage, never hardcoded
 
-// Obtener configuración desde localStorage o usar defaults
+// Check if Firebase is configured
+export function isFirebaseConfigured() {
+  return !!(
+    localStorage.getItem('firebaseApiKey') &&
+    localStorage.getItem('firebaseProjectId') &&
+    localStorage.getItem('firebaseAuthDomain')
+  );
+}
+
+// Get configuration ONLY from localStorage (no defaults)
 export function getFirebaseConfigValues() {
+  if (!isFirebaseConfigured()) {
+    return null;
+  }
+
   return {
-    apiKey: localStorage.getItem('firebaseApiKey') || DEFAULT_CONFIG.apiKey,
-    authDomain: localStorage.getItem('firebaseAuthDomain') || DEFAULT_CONFIG.authDomain,
-    projectId: localStorage.getItem('firebaseProjectId') || DEFAULT_CONFIG.projectId,
-    storageBucket: localStorage.getItem('firebaseStorageBucket') || DEFAULT_CONFIG.storageBucket,
-    messagingSenderId: localStorage.getItem('firebaseMessagingSenderId') || DEFAULT_CONFIG.messagingSenderId,
-    appId: localStorage.getItem('firebaseAppId') || DEFAULT_CONFIG.appId
+    apiKey: localStorage.getItem('firebaseApiKey'),
+    authDomain: localStorage.getItem('firebaseAuthDomain'),
+    projectId: localStorage.getItem('firebaseProjectId'),
+    storageBucket: localStorage.getItem('firebaseStorageBucket'),
+    messagingSenderId: localStorage.getItem('firebaseMessagingSenderId'),
+    appId: localStorage.getItem('firebaseAppId')
   };
 }
 
@@ -36,24 +42,41 @@ export function setFirebaseConfig(config) {
   console.log('Configuración Firebase guardada');
 }
 
-// Crear configuración de Firebase con valores actuales
-function getFirebaseConfig() {
-  return getFirebaseConfigValues();
-}
-
-// Compatibilidad hacia atrás
-export function getApiKey() {
-  return getFirebaseConfigValues().apiKey;
-}
-
-const firebaseConfig = getFirebaseConfig();
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
+// Firebase instances - lazy initialized only if configured
+let app = null;
+let db = null;
+let auth = null;
 let currentUser = null;
+
+// Initialize Firebase only if configured
+export function initializeFirebase() {
+  if (!isFirebaseConfigured()) {
+    console.warn('⚠️ Firebase not configured - running in OFFLINE mode');
+    return false;
+  }
+
+  if (app) {
+    console.log('Firebase already initialized');
+    return true;
+  }
+
+  try {
+    const firebaseConfig = getFirebaseConfigValues();
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    console.log('✅ Firebase initialized with user configuration');
+    return true;
+  } catch (error) {
+    console.error('❌ Error initializing Firebase:', error);
+    return false;
+  }
+}
+
+// Get Firebase instances (will be null if not configured)
+export function getFirebaseInstance() {
+  return { app, db, auth };
+}
 
 // ============ AUTH ============
 export async function initializeAuth() {
