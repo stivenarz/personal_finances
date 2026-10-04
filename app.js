@@ -75,6 +75,49 @@ function updateDatabaseModeStatus() {
     }
 }
 
+function setupDatabaseModeToggle() {
+    const localRadio = document.getElementById('db-mode-local');
+    const firebaseRadio = document.getElementById('db-mode-firebase');
+
+    if (!localRadio || !firebaseRadio) return;
+
+    const savedMode = localStorage.getItem('db_mode_preference');
+    if (savedMode === 'local') {
+        localRadio.checked = true;
+        APP.useFirebasePreference = false;
+    } else if (savedMode === 'firebase') {
+        firebaseRadio.checked = true;
+        APP.useFirebasePreference = true;
+    } else if (window.firebaseDB?.isFirebaseConfigured?.()) {
+        firebaseRadio.checked = true;
+        APP.useFirebasePreference = true;
+    } else {
+        localRadio.checked = true;
+        APP.useFirebasePreference = false;
+    }
+
+    localRadio.addEventListener('change', () => {
+        if (localRadio.checked) {
+            localStorage.setItem('db_mode_preference', 'local');
+            APP.useFirebasePreference = false;
+            location.reload();
+        }
+    });
+
+    firebaseRadio.addEventListener('change', () => {
+        if (firebaseRadio.checked) {
+            if (!window.firebaseDB?.isFirebaseConfigured?.()) {
+                showNotification('⚠️ Firebase no está configurado', 'warning');
+                localRadio.checked = true;
+                return;
+            }
+            localStorage.setItem('db_mode_preference', 'firebase');
+            APP.useFirebasePreference = true;
+            location.reload();
+        }
+    });
+}
+
 // ============ INITIALIZATION ============
 async function initApp() {
     const spinner = document.getElementById('loading-spinner');
@@ -82,8 +125,11 @@ async function initApp() {
     await import('./firebase-config.js').then(async (fb) => {
         window.firebaseDB = fb;
 
-        // Check if Firebase is configured
-        if (fb.isFirebaseConfigured()) {
+        const userPreference = localStorage.getItem('db_mode_preference');
+        const firebaseConfigured = fb.isFirebaseConfigured();
+        const shouldUseFirebase = userPreference === 'firebase' && firebaseConfigured;
+
+        if (shouldUseFirebase) {
             APP.isOnline = true;
 
             try {
@@ -105,13 +151,18 @@ async function initApp() {
         } else {
             APP.isOnline = false;
             loadOfflineData();
-            showNotification('⚠️ Firebase no configurado. Modo offline.', 'warning');
+            if (userPreference === 'local') {
+                showNotification('📝 Usando Base de Datos Local', 'info');
+            } else {
+                showNotification('⚠️ Usando Base de Datos Local', 'info');
+            }
         }
     });
 
     setupEventListeners();
     setupMobileMenu();
     setupSyncButton();
+    setupDatabaseModeToggle();
     updateDatabaseModeStatus();
 
     // Hide spinner after loading
