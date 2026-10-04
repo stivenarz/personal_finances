@@ -206,16 +206,25 @@ async function initApp() {
                 await fb.initializeAuth();
                 const allData = await fb.loadAllData();
                 APP.data = allData;
+                initializeDefaultCategories();
+                renderCategories();
+                renderAccounts();
                 showNotification('🔵 Conectado a Firebase', 'success');
             } catch (error) {
                 console.error('Firebase error:', error);
                 APP.isOnline = false;
                 loadOfflineData();
+                initializeDefaultCategories();
+                renderCategories();
+                renderAccounts();
                 showNotification('⚠️ Error conectando a Firebase. Modo offline.', 'warning');
             }
         } else {
             APP.isOnline = false;
             loadOfflineData();
+            initializeDefaultCategories();
+            renderCategories();
+            renderAccounts();
             if (userPreference === 'local') {
                 showNotification('📝 Usando Base de Datos Local', 'info');
             } else {
@@ -236,9 +245,6 @@ async function initApp() {
     }
 
     setupFirebaseEventListeners();
-    initializeDefaultCategories();
-    renderAccounts();
-    renderCategories();
     setCurrentMonth();
     showView('dashboard');
     updateDashboard();
