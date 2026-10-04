@@ -401,10 +401,11 @@ body {
 
 .budget-item-amount {
     font-weight: 600;
-    min-width: 120px;
+    min-width: 50px;
     text-align: right;
     color: var(--text-primary);
     font-size: 14px;
+    flex-shrink: 0;
 }
 
 .debt-item-status {
