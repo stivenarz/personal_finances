@@ -40,6 +40,51 @@ function saveOfflineData() {
     }
 }
 
+// ============ DELETED RECORDS TRACKING ============
+function trackDeletion(collectionName, id) {
+    try {
+        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
+        if (!deletedRecords[collectionName]) deletedRecords[collectionName] = {};
+
+        deletedRecords[collectionName][id] = {
+            timestamp: Date.now(),
+            deletedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem('deletedRecords', JSON.stringify(deletedRecords));
+    } catch (error) {
+        console.error('Error tracking deletion:', error);
+    }
+}
+
+function isDeletedRecently(collectionName, id) {
+    try {
+        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
+        return deletedRecords[collectionName]?.[id] !== undefined;
+    } catch {
+        return false;
+    }
+}
+
+function cleanupOldDeletions() {
+    try {
+        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+
+        for (const [collection, deletedIds] of Object.entries(deletedRecords)) {
+            for (const [id, record] of Object.entries(deletedIds)) {
+                if (record.timestamp < thirtyDaysAgo) {
+                    delete deletedIds[id];
+                }
+            }
+        }
+
+        localStorage.setItem('deletedRecords', JSON.stringify(deletedRecords));
+    } catch (error) {
+        console.error('Error cleaning up deletions:', error);
+    }
+}
+
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -387,7 +432,7 @@ function setupSyncButton() {
     if (!syncBtn) return;
 
     syncBtn.addEventListener('click', async () => {
-        if (!confirm('¿Sincronizar datos locales a Firebase?\n\nEsto enviará todos tus datos locales a la nube.')) {
+        if (!confirm('¿Sincronizar datos bidireccional con Firebase?\n\nEsto enviará/recibirá datos de la nube.')) {
             return;
         }
 
@@ -400,7 +445,7 @@ function setupSyncButton() {
                 throw new Error('Firebase no está configurado');
             }
 
-            // Initialize Firebase if not already done
+            // Initialize Firebase
             const initialized = window.firebaseDB.initializeFirebase();
             if (!initialized) {
                 throw new Error('No se pudo inicializar Firebase');
@@ -409,23 +454,56 @@ function setupSyncButton() {
             // Initialize authentication
             await window.firebaseDB.initializeAuth();
 
-            // Save current data to Firebase
             const collections = ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals'];
+            const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
 
+            // Step 1: Delete records from Firebase that were deleted locally
+            for (const collectionName of collections) {
+                const deletedIds = deletedRecords[collectionName] || {};
+                for (const id of Object.keys(deletedIds)) {
+                    try {
+                        await window.firebaseDB.deleteData(collectionName, id);
+                    } catch (err) {
+                        console.log(`Record not found in Firebase: ${collectionName}/${id}`);
+                    }
+                }
+            }
+
+            // Step 2: Upload local data to Firebase (except deleted items)
             for (const collectionName of collections) {
                 const items = APP.data[collectionName] || [];
                 for (const item of items) {
-                    if (item.id) {
+                    if (item.id && !isDeletedRecently(collectionName, item.id)) {
                         await window.firebaseDB.saveData(collectionName, item);
                     }
                 }
             }
 
-            showNotification('✅ Sincronización completada', 'success');
+            // Step 3: Download new data from Firebase
+            const firebaseData = await window.firebaseDB.loadAllData();
+            for (const [collectionName, items] of Object.entries(firebaseData)) {
+                for (const remoteItem of items) {
+                    if (!isDeletedRecently(collectionName, remoteItem.id)) {
+                        const exists = APP.data[collectionName]?.find(i => i.id === remoteItem.id);
+                        if (!exists) {
+                            APP.data[collectionName].push(remoteItem);
+                        }
+                    }
+                }
+            }
+
+            // Clean up old deletion records
+            cleanupOldDeletions();
+            saveOfflineData();
+
+            showNotification('✅ Sincronización bidireccional completada', 'success');
             syncBtn.textContent = '🔄 Sincronizar';
             syncBtn.style.display = 'none';
             APP.isOnline = true;
             updateDatabaseModeStatus();
+            updateDashboard();
+            renderTransactionsList();
+            renderDebtsList();
         } catch (error) {
             console.error('Sync error:', error);
             showNotification('❌ Error: ' + error.message, 'warning');
@@ -749,18 +827,62 @@ function renderIncomeList() {
 }
 
 // ============ DEBTS ============
+function calculateDebtMetrics(initialBalance, interestRate, termMonths) {
+    if (!initialBalance || !interestRate || !termMonths) return null;
+
+    const monthlyRate = interestRate / 100 / 12;
+
+    // Calculate monthly payment using standard loan formula
+    // M = P * [r(1+r)^n] / [(1+r)^n - 1]
+    if (monthlyRate === 0) {
+        return {
+            monthlyPayment: initialBalance / termMonths,
+            totalInterest: 0
+        };
+    }
+
+    const numerator = monthlyRate * Math.pow(1 + monthlyRate, termMonths);
+    const denominator = Math.pow(1 + monthlyRate, termMonths) - 1;
+    const monthlyPayment = initialBalance * (numerator / denominator);
+    const totalInterest = (monthlyPayment * termMonths) - initialBalance;
+
+    return {
+        monthlyPayment: Math.round(monthlyPayment * 100) / 100,
+        totalInterest: Math.round(totalInterest * 100) / 100
+    };
+}
+
 function handleAddDebt(e) {
     e.preventDefault();
+
+    const initialBalance = parseFloat(document.getElementById('deuda-inicial').value) || parseFloat(document.getElementById('deuda-saldo').value);
+    const interestRateEl = document.getElementById('deuda-interes');
+    const termMonthsEl = document.getElementById('deuda-plazo');
+
+    let interestRate = interestRateEl ? parseFloat(interestRateEl.value) : 0;
+    let termMonths = termMonthsEl ? parseFloat(termMonthsEl.value) : 0;
+    let monthlyPayment = parseFloat(document.getElementById('deuda-cuota').value);
+
+    // Auto-calculate if interest rate and term months are provided
+    if (interestRate > 0 && termMonths > 0) {
+        const metrics = calculateDebtMetrics(initialBalance, interestRate, termMonths);
+        if (metrics) {
+            monthlyPayment = metrics.monthlyPayment;
+        }
+    }
 
     const debt = {
         id: 'debt-' + Date.now(),
         entity: document.getElementById('deuda-entidad').value,
-        initialBalance: parseFloat(document.getElementById('deuda-inicial').value) || parseFloat(document.getElementById('deuda-saldo').value),
+        initialBalance: initialBalance,
         currentBalance: parseFloat(document.getElementById('deuda-saldo').value),
-        monthlyPayment: parseFloat(document.getElementById('deuda-cuota').value),
+        monthlyPayment: monthlyPayment,
         holder: document.getElementById('deuda-titular').value,
         nextPaymentDate: document.getElementById('deuda-fecha-pago').value,
-        createdAt: Date.now()
+        interestRate: interestRate,
+        termMonths: termMonths,
+        createdAt: Date.now(),
+        startDate: new Date().toISOString().split('T')[0]
     };
 
     APP.data.debts.push(debt);
@@ -887,7 +1009,7 @@ window.showPaymentModal = function(debtId) {
     input.focus();
     input.select();
 
-    document.getElementById('confirmPayment').addEventListener('click', () => {
+    document.getElementById('confirmPayment').addEventListener('click', async () => {
         const amount = parseFloat(input.value);
         modal.remove();
 
@@ -903,19 +1025,35 @@ window.showPaymentModal = function(debtId) {
 
         debt.currentBalance -= amount;
 
-        APP.data.debtPayments.push({
+        const debtPayment = {
             id: 'pay-' + Date.now(),
             debtId: debtId,
             amount: amount,
             date: new Date().toISOString().split('T')[0],
             timestamp: Date.now()
-        });
+        };
+
+        APP.data.debtPayments.push(debtPayment);
 
         if (debt.currentBalance <= 0) {
             debt.currentBalance = 0;
         }
 
+        // Save to offline and sync to Firebase if online
         saveOfflineData();
+
+        if (APP.isOnline && window.firebaseDB) {
+            try {
+                // Save payment to Firebase
+                await window.firebaseDB.saveData('debtPayments', debtPayment);
+                // Update debt balance in Firebase
+                await window.firebaseDB.updateData('debts', debtId, { currentBalance: debt.currentBalance });
+            } catch (err) {
+                console.error('Error saving to Firebase:', err);
+                showNotification('⚠️ Sincronización parcial: datos guardados localmente', 'warning');
+            }
+        }
+
         updateDashboard();
         renderDebtsList();
         alert('✅ Pago registrado correctamente');
@@ -942,6 +1080,8 @@ window.deleteDebt = async function(debtId) {
     if (!confirmed) return;
 
     APP.data.debts = APP.data.debts.filter(d => d.id !== debtId);
+    trackDeletion('debts', debtId);
+
     updateDashboard();
     renderDebtsList();
 
@@ -969,6 +1109,8 @@ window.deleteTransaction = async function(transId) {
     if (!confirmed) return;
 
     APP.data.transactions = APP.data.transactions.filter(t => t.id !== transId);
+    trackDeletion('transactions', transId);
+
     updateDashboard();
     renderExpensesList();
     renderIncomeList();
