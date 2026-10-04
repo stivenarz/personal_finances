@@ -17,7 +17,8 @@
       "Bash(git push *)",
       "Bash(git commit -m 'fix: remove hardcoded Firebase credentials and implement lazy initialization *)",
       "Bash(git commit -m 'feat: implement offline mode with localStorage fallback *)",
-      "Bash(git commit -m 'fix: enable offline CRUD operations and data persistence *)"
+      "Bash(git commit -m 'fix: enable offline CRUD operations and data persistence *)",
+      "Bash(python3 -m http.server 8000)"
     ]
   }
 }
