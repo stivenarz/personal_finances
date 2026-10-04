@@ -837,7 +837,7 @@ function renderDebtsList() {
     }).join('');
 }
 
-function registerDebtPayment(debtId) {
+window.registerDebtPayment = function(debtId) {
     const debt = APP.data.debts.find(d => d.id === debtId);
     if (!debt) return;
 
@@ -865,7 +865,11 @@ function registerDebtPayment(debtId) {
             debt.currentBalance = 0;
         }
 
-        saveDataToStorage();
+        if (APP.isOnline && window.firebaseDB) {
+            saveOfflineData();
+        } else {
+            saveOfflineData();
+        }
         updateDashboard();
         renderDebtsList();
         alert('✅ Pago registrado correctamente');
