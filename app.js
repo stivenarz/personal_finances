@@ -537,7 +537,6 @@ function setupEventListeners() {
     document.getElementById('form-deuda').addEventListener('submit', handleAddDebt);
     document.getElementById('form-cuenta').addEventListener('submit', handleAddAccount);
     document.getElementById('form-categoria').addEventListener('submit', handleAddCategory);
-    document.getElementById('form-meta').addEventListener('submit', handleAddGoal);
     const formMetaAhorro = document.getElementById('form-meta-ahorro');
     if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
 
@@ -1305,7 +1304,8 @@ function handleAddAccount(e) {
     const account = {
         id: 'acc-' + Date.now(),
         name: document.getElementById('cuenta-nombre').value,
-        type: document.getElementById('cuenta-tipo').value
+        type: document.getElementById('cuenta-tipo').value,
+        balance: 0
     };
 
     APP.data.accounts.push(account);
@@ -1461,50 +1461,6 @@ window.deleteCategory = async function(categoryId) {
     }
 }
 
-function handleAddGoal(e) {
-    e.preventDefault();
-
-    const goal = {
-        id: 'goal-' + Date.now(),
-        description: document.getElementById('meta-descripcion').value,
-        targetAmount: parseFloat(document.getElementById('meta-monto').value),
-        deadline: document.getElementById('meta-fecha').value,
-        currentAmount: 0
-    };
-
-    APP.data.goals.push(goal);
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('goals', goal).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
-
-    e.target.reset();
-    renderGoalsList();
-    updateDashboard();
-    alert('✅ Meta agregada');
-}
-
-function renderGoalsList() {
-    const container = document.getElementById('list-metas');
-    container.innerHTML = APP.data.goals.map(goal => {
-        const progress = (goal.currentAmount / goal.targetAmount) * 100;
-        return `
-            <div class="goal-item">
-                <div>
-                    <div class="goal-desc">${goal.description}</div>
-                    <div class="goal-progress">Progreso: $${formatNumber(goal.currentAmount)} de $${formatNumber(goal.targetAmount)}</div>
-                </div>
-                <div style="font-size: 12px; color: var(--text-secondary);">${goal.deadline}</div>
-                <button class="btn btn-danger" onclick="deleteGoal('${goal.id}')">Eliminar</button>
-            </div>
-        `;
-    }).join('');
-}
-
 window.deleteGoal = async function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
     if (!goal) return;
@@ -1618,7 +1574,7 @@ window.showSavingsAbono = function(goalId) {
     `;
 
     const accountOptions = APP.data.accounts.map(acc =>
-        `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance)})</option>`
+        `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance || 0)})</option>`
     ).join('');
 
     const content = document.createElement('div');
@@ -1804,7 +1760,7 @@ function updateDashboard() {
     const savingRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
     // Calculate account balances
-    const totalAccountBalance = APP.data.accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalAccountBalance = APP.data.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
     // Calculate total savings goals
     const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
