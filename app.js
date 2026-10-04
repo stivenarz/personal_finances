@@ -837,26 +837,76 @@ function renderDebtsList() {
     }).join('');
 }
 
-window.registerDebtPayment = function(debtId) {
+window.showPaymentModal = function(debtId) {
     const debt = APP.data.debts.find(d => d.id === debtId);
     if (!debt) return;
 
-    const amount = prompt(`Ingrese el monto a pagar (Saldo actual: $${formatNumber(debt.currentBalance)}):`, debt.monthlyPayment.toString());
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
 
-    if (amount && !isNaN(amount)) {
-        const paymentAmount = parseFloat(amount);
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    `;
 
-        if (paymentAmount > debt.currentBalance) {
+    content.innerHTML = `
+        <h2 style="margin-top: 0; color: #333;">Registrar Pago</h2>
+        <p style="color: #666; margin-bottom: 15px;">
+            <strong>Deuda:</strong> ${debt.description || 'Sin nombre'}<br>
+            <strong>Saldo actual:</strong> $${formatNumber(debt.currentBalance)}<br>
+            <strong>Cuota sugerida:</strong> $${formatNumber(debt.monthlyPayment)}
+        </p>
+        <input type="number" id="paymentAmount" placeholder="Monto a pagar" value="${debt.monthlyPayment}"
+            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+            <button id="confirmPayment" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Registrar</button>
+            <button id="cancelPayment" style="flex: 1; padding: 12px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('paymentAmount');
+    input.focus();
+    input.select();
+
+    document.getElementById('confirmPayment').addEventListener('click', () => {
+        const amount = parseFloat(input.value);
+        modal.remove();
+
+        if (!amount || isNaN(amount) || amount <= 0) {
+            alert('❌ Ingrese un monto válido');
+            return;
+        }
+
+        if (amount > debt.currentBalance) {
             alert('❌ El monto no puede exceder el saldo actual');
             return;
         }
 
-        debt.currentBalance -= paymentAmount;
+        debt.currentBalance -= amount;
 
         APP.data.debtPayments.push({
             id: 'pay-' + Date.now(),
             debtId: debtId,
-            amount: paymentAmount,
+            amount: amount,
             date: new Date().toISOString().split('T')[0],
             timestamp: Date.now()
         });
@@ -865,15 +915,23 @@ window.registerDebtPayment = function(debtId) {
             debt.currentBalance = 0;
         }
 
-        if (APP.isOnline && window.firebaseDB) {
-            saveOfflineData();
-        } else {
-            saveOfflineData();
-        }
+        saveOfflineData();
         updateDashboard();
         renderDebtsList();
         alert('✅ Pago registrado correctamente');
-    }
+    });
+
+    document.getElementById('cancelPayment').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+};
+
+window.registerDebtPayment = function(debtId) {
+    window.showPaymentModal(debtId);
 }
 
 window.deleteDebt = async function(debtId) {
