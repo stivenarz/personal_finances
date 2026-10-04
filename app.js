@@ -246,7 +246,10 @@ async function initApp() {
 
 function initializeDefaultCategories() {
     // Create default categories if none exist
-    if (!APP.data.categories || APP.data.categories.length === 0) {
+    const hasExpenseCategories = APP.data.categories && APP.data.categories.some(c => c.type === 'Egreso');
+    const hasIncomeCategories = APP.data.categories && APP.data.categories.some(c => c.type === 'Ingreso');
+
+    if (!hasExpenseCategories || !hasIncomeCategories) {
         const defaultCategories = [
             { id: 'cat-groceries', name: 'Groceries', type: 'Egreso', budget: 0 },
             { id: 'cat-utilities', name: 'Utilities', type: 'Egreso', budget: 0 },
@@ -260,15 +263,22 @@ function initializeDefaultCategories() {
             { id: 'cat-investments', name: 'Investments', type: 'Ingreso', budget: 0 }
         ];
 
-        APP.data.categories = defaultCategories;
-        saveOfflineData();
+        // Filter out categories that already exist
+        const existingIds = new Set(APP.data.categories.map(c => c.id));
+        const newCategories = defaultCategories.filter(cat => !existingIds.has(cat.id));
 
-        if (APP.isOnline && window.firebaseDB) {
-            defaultCategories.forEach(cat => {
-                window.firebaseDB.saveData('categories', cat).catch(err =>
-                    console.error('Error guardando categoría en Firebase:', err)
-                );
-            });
+        if (newCategories.length > 0) {
+            APP.data.categories.push(...newCategories);
+            console.log('Added default categories:', newCategories.length);
+            saveOfflineData();
+
+            if (APP.isOnline && window.firebaseDB) {
+                newCategories.forEach(cat => {
+                    window.firebaseDB.saveData('categories', cat).catch(err =>
+                        console.error('Error guardando categoría en Firebase:', err)
+                    );
+                });
+            }
         }
     }
 }
