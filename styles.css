@@ -358,7 +358,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
+    padding: 15px 0;
+    margin-bottom: 12px;
     border-bottom: 1px solid var(--border);
 }
 
@@ -377,9 +378,9 @@ body {
 .budget-item-progress {
     flex: 1;
     margin: 0 15px;
-    height: 6px;
+    height: 12px;
     background: var(--border);
-    border-radius: 3px;
+    border-radius: 6px;
     overflow: hidden;
 }
 
