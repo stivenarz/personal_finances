@@ -871,6 +871,15 @@ function handleAddDebt(e) {
         }
     }
 
+    // Calculate next payment date based on payment day
+    const paymentDay = parseInt(document.getElementById('deuda-fecha-pago').value) || 1;
+    const today = new Date();
+    let nextPayment = new Date(today.getFullYear(), today.getMonth(), paymentDay);
+
+    if (nextPayment <= today) {
+        nextPayment = new Date(today.getFullYear(), today.getMonth() + 1, paymentDay);
+    }
+
     const debt = {
         id: 'debt-' + Date.now(),
         entity: document.getElementById('deuda-entidad').value,
@@ -878,7 +887,8 @@ function handleAddDebt(e) {
         currentBalance: parseFloat(document.getElementById('deuda-saldo').value),
         monthlyPayment: monthlyPayment,
         holder: document.getElementById('deuda-titular').value,
-        nextPaymentDate: document.getElementById('deuda-fecha-pago').value,
+        paymentDay: paymentDay,
+        nextPaymentDate: nextPayment.toISOString().split('T')[0],
         interestRate: interestRate,
         termMonths: termMonths,
         createdAt: Date.now(),
@@ -1066,6 +1076,29 @@ window.showPaymentModal = function(debtId) {
             debt.currentBalance = 0;
         }
 
+        // Recalculate monthly payment and next payment date if interest rate and term months are set
+        if (debt.interestRate > 0 && debt.termMonths > 0 && debt.currentBalance > 0) {
+            const remainingMonths = Math.ceil((debt.currentBalance / debt.monthlyPayment) * 12 / debt.termMonths);
+            if (remainingMonths > 0) {
+                const metrics = calculateDebtMetrics(debt.currentBalance, debt.interestRate, remainingMonths);
+                if (metrics) {
+                    debt.monthlyPayment = metrics.monthlyPayment;
+                }
+            }
+        }
+
+        // Calculate next payment date based on payment day
+        if (debt.paymentDay) {
+            const today = new Date();
+            let nextPayment = new Date(today.getFullYear(), today.getMonth(), debt.paymentDay);
+
+            if (nextPayment <= today) {
+                nextPayment = new Date(today.getFullYear(), today.getMonth() + 1, debt.paymentDay);
+            }
+
+            debt.nextPaymentDate = nextPayment.toISOString().split('T')[0];
+        }
+
         // Record payment
         const debtPayment = {
             id: 'pay-' + Date.now(),
@@ -1084,7 +1117,7 @@ window.showPaymentModal = function(debtId) {
             type: 'Egreso',
             date: new Date().toISOString().split('T')[0],
             category: 'Deuda',
-            description: `Pago de deuda: ${debt.description || 'Sin nombre'}`,
+            description: `Pago de deuda: ${debt.entity || 'Sin nombre'}`,
             amount: amount,
             account: accountId,
             timestamp: Date.now()
