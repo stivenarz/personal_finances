@@ -963,6 +963,10 @@ window.showPaymentModal = function(debtId) {
     const debt = APP.data.debts.find(d => d.id === debtId);
     if (!debt) return;
 
+    const accountOptions = APP.data.accounts.map(acc =>
+        `<option value="${acc.id}">${acc.name}</option>`
+    ).join('');
+
     const modal = document.createElement('div');
     modal.style.cssText = `
         position: fixed;
@@ -982,22 +986,37 @@ window.showPaymentModal = function(debtId) {
         background: white;
         padding: 30px;
         border-radius: 12px;
-        max-width: 400px;
+        max-width: 450px;
         width: 90%;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-height: 80vh;
+        overflow-y: auto;
     `;
 
     content.innerHTML = `
-        <h2 style="margin-top: 0; color: #333;">Registrar Pago</h2>
-        <p style="color: #666; margin-bottom: 15px;">
+        <h2 style="margin-top: 0; color: #333;">Registrar Pago de Deuda</h2>
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
             <strong>Deuda:</strong> ${debt.description || 'Sin nombre'}<br>
             <strong>Saldo actual:</strong> $${formatNumber(debt.currentBalance)}<br>
             <strong>Cuota sugerida:</strong> $${formatNumber(debt.monthlyPayment)}
         </p>
-        <input type="number" id="paymentAmount" placeholder="Monto a pagar" value="${debt.monthlyPayment}"
-            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 20px;">
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Seleccionar Cuenta</label>
+            <select id="paymentAccount" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <option value="">-- Selecciona una cuenta --</option>
+                ${accountOptions}
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Monto a Pagar</label>
+            <input type="number" id="paymentAmount" placeholder="Monto a pagar" value="${debt.monthlyPayment}"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+        </div>
+
         <div style="display: flex; gap: 10px;">
-            <button id="confirmPayment" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Registrar</button>
+            <button id="confirmPayment" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Registrar Pago</button>
             <button id="cancelPayment" style="flex: 1; padding: 12px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
         </div>
     `;
@@ -1005,13 +1024,20 @@ window.showPaymentModal = function(debtId) {
     modal.appendChild(content);
     document.body.appendChild(modal);
 
-    const input = document.getElementById('paymentAmount');
-    input.focus();
-    input.select();
+    const amountInput = document.getElementById('paymentAmount');
+    const accountSelect = document.getElementById('paymentAccount');
+    amountInput.focus();
+    amountInput.select();
 
     document.getElementById('confirmPayment').addEventListener('click', async () => {
-        const amount = parseFloat(input.value);
+        const amount = parseFloat(amountInput.value);
+        const accountId = accountSelect.value;
         modal.remove();
+
+        if (!accountId) {
+            alert('❌ Selecciona una cuenta');
+            return;
+        }
 
         if (!amount || isNaN(amount) || amount <= 0) {
             alert('❌ Ingrese un monto válido');
@@ -1023,31 +1049,62 @@ window.showPaymentModal = function(debtId) {
             return;
         }
 
-        debt.currentBalance -= amount;
+        const account = APP.data.accounts.find(a => a.id === accountId);
+        if (!account) {
+            alert('❌ Cuenta no encontrada');
+            return;
+        }
 
+        if (account.balance < amount) {
+            alert('❌ Saldo insuficiente en la cuenta');
+            return;
+        }
+
+        // Update debt
+        debt.currentBalance -= amount;
+        if (debt.currentBalance <= 0) {
+            debt.currentBalance = 0;
+        }
+
+        // Record payment
         const debtPayment = {
             id: 'pay-' + Date.now(),
             debtId: debtId,
             amount: amount,
             date: new Date().toISOString().split('T')[0],
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            accountId: accountId
         };
 
         APP.data.debtPayments.push(debtPayment);
 
-        if (debt.currentBalance <= 0) {
-            debt.currentBalance = 0;
-        }
+        // Create transaction (Egreso)
+        const transaction = {
+            id: 'trans-' + Date.now(),
+            type: 'Egreso',
+            date: new Date().toISOString().split('T')[0],
+            category: 'Deuda',
+            description: `Pago de deuda: ${debt.description || 'Sin nombre'}`,
+            amount: amount,
+            account: accountId,
+            timestamp: Date.now()
+        };
 
-        // Save to offline and sync to Firebase if online
+        APP.data.transactions.push(transaction);
+
+        // Update account balance
+        account.balance -= amount;
+
+        // Save locally
         saveOfflineData();
 
+        // Sync to Firebase if online
         if (APP.isOnline && window.firebaseDB) {
             try {
-                // Save payment to Firebase
                 await window.firebaseDB.saveData('debtPayments', debtPayment);
-                // Update debt balance in Firebase
                 await window.firebaseDB.updateData('debts', debtId, { currentBalance: debt.currentBalance });
+                await window.firebaseDB.saveData('transactions', transaction);
+                await window.firebaseDB.updateData('accounts', accountId, { balance: account.balance });
             } catch (err) {
                 console.error('Error saving to Firebase:', err);
                 showNotification('⚠️ Sincronización parcial: datos guardados localmente', 'warning');
@@ -1056,7 +1113,9 @@ window.showPaymentModal = function(debtId) {
 
         updateDashboard();
         renderDebtsList();
-        alert('✅ Pago registrado correctamente');
+        renderAccountsList();
+        renderTransactionsList();
+        showNotification('✅ Pago registrado correctamente', 'success');
     });
 
     document.getElementById('cancelPayment').addEventListener('click', () => {
