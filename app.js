@@ -538,6 +538,8 @@ function setupEventListeners() {
     document.getElementById('form-cuenta').addEventListener('submit', handleAddAccount);
     document.getElementById('form-categoria').addEventListener('submit', handleAddCategory);
     document.getElementById('form-meta').addEventListener('submit', handleAddGoal);
+    const formMetaAhorro = document.getElementById('form-meta-ahorro');
+    if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
 
     // Gastos filters
     document.getElementById('gastos-search').addEventListener('input', renderExpensesList);
@@ -658,6 +660,7 @@ function showView(viewName) {
         gastos: 'Gastos',
         ingresos: 'Ingresos',
         deudas: 'Deudas',
+        ahorros: 'Ahorros',
         transacciones: 'Transacciones',
         configuracion: 'Configuración'
     };
@@ -665,6 +668,9 @@ function showView(viewName) {
 
     if (viewName === 'deudas') {
         renderDebtsList();
+    } else if (viewName === 'ahorros') {
+        renderSavingsGoalsList();
+        updateSavingsKpis();
     } else if (viewName === 'gastos') {
         renderExpensesList();
     } else if (viewName === 'ingresos') {
@@ -1525,6 +1531,110 @@ window.deleteGoal = async function(goalId) {
     }
 }
 
+// ============ SAVINGS GOALS ============
+function handleAddSavingsGoal(e) {
+    e.preventDefault();
+
+    const goal = {
+        id: 'saving-' + Date.now(),
+        description: document.getElementById('meta-ahorro-descripcion').value,
+        targetAmount: parseFloat(document.getElementById('meta-ahorro-monto').value),
+        currentAmount: parseFloat(document.getElementById('meta-ahorro-actual').value) || 0,
+        deadline: document.getElementById('meta-ahorro-fecha').value,
+        createdAt: Date.now()
+    };
+
+    APP.data.goals.push(goal);
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('goals', goal).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
+
+    e.target.reset();
+    renderSavingsGoalsList();
+    updateDashboard();
+    showNotification('✅ Meta de ahorro creada', 'success');
+}
+
+function renderSavingsGoalsList() {
+    const container = document.getElementById('list-metas-ahorros');
+    const goals = APP.data.goals || [];
+
+    if (goals.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">No hay metas de ahorro</p>';
+        return;
+    }
+
+    container.innerHTML = goals.map(goal => {
+        const progress = (goal.currentAmount / goal.targetAmount) * 100;
+        const daysLeft = goal.deadline ? Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+        const isCompleted = goal.currentAmount >= goal.targetAmount;
+
+        return `
+            <div class="goal-card" style="border-left: 4px solid ${isCompleted ? '#10b981' : '#3b82f6'};">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 10px 0; color: #333;">${goal.description}</h4>
+                        <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                            $${formatNumber(goal.currentAmount)} / $${formatNumber(goal.targetAmount)}
+                        </p>
+                        ${goal.deadline ? `<p style="margin: 5px 0; color: #666; font-size: 14px;">Plazo: ${daysLeft} días</p>` : ''}
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSavingsGoal('${goal.id}')" style="margin-left: 10px;">Eliminar</button>
+                </div>
+                <div style="width: 100%; background: #f0f0f0; border-radius: 4px; height: 8px; margin-top: 10px; overflow: hidden;">
+                    <div style="width: ${Math.min(progress, 100)}%; height: 100%; background: ${isCompleted ? '#10b981' : '#3b82f6'};"></div>
+                </div>
+                <p style="margin: 8px 0 0 0; text-align: right; color: #666; font-size: 12px;">${progress.toFixed(0)}% completado</p>
+            </div>
+        `;
+    }).join('');
+}
+
+window.deleteSavingsGoal = async function(goalId) {
+    const goal = APP.data.goals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    const confirmed = confirm(`¿Eliminar la meta "${goal.description}"?`);
+    if (!confirmed) return;
+
+    APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
+    renderSavingsGoalsList();
+    updateDashboard();
+
+    if (APP.isOnline && window.firebaseDB) {
+        try {
+            await window.firebaseDB.deleteData('goals', goalId);
+        } catch (err) {
+            console.error('Error deleting goal:', err);
+            APP.data.goals.push(goal);
+            renderSavingsGoalsList();
+            updateDashboard();
+            showNotification('⚠️ Error al eliminar', 'warning');
+        }
+    } else {
+        saveOfflineData();
+    }
+};
+
+function updateSavingsKpis() {
+    const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+    const activeMetas = APP.data.goals.filter(g => g.currentAmount < g.targetAmount).length;
+    const completedMetas = APP.data.goals.filter(g => g.currentAmount >= g.targetAmount).length;
+
+    const kpiAhorrosTotal = document.getElementById('kpi-ahorros-total');
+    const kpiMetasActivas = document.getElementById('kpi-metas-activas');
+    const kpiMetasCompletadas = document.getElementById('kpi-metas-completadas');
+
+    if (kpiAhorrosTotal) kpiAhorrosTotal.textContent = `$${formatNumber(totalSavings)}`;
+    if (kpiMetasActivas) kpiMetasActivas.textContent = activeMetas;
+    if (kpiMetasCompletadas) kpiMetasCompletadas.textContent = completedMetas;
+}
+
 // ============ DASHBOARD ============
 function updateDashboard() {
     if (!APP.gsheet.isConnected && localStorage.getItem('gsheetUrl')) {
@@ -1547,11 +1657,19 @@ function updateDashboard() {
     const balance = totalIncome - totalExpenses;
     const savingRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
+    // Calculate account balances
+    const totalAccountBalance = APP.data.accounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+    // Calculate total savings goals
+    const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+
     // Update KPIs
     document.getElementById('kpi-ingresos').textContent = `$${formatNumber(totalIncome)}`;
     document.getElementById('kpi-egresos').textContent = `$${formatNumber(totalExpenses)}`;
     document.getElementById('kpi-balance').textContent = `$${formatNumber(balance)}`;
     document.getElementById('kpi-ahorro').textContent = `${savingRate.toFixed(1)}%`;
+    document.getElementById('kpi-saldo-cuentas').textContent = `$${formatNumber(totalAccountBalance)}`;
+    document.getElementById('kpi-total-ahorros').textContent = `$${formatNumber(totalSavings)}`;
 
     // Update budget comparison
     updateBudgetComparison(monthTransactions);

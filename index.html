@@ -38,6 +38,9 @@
                 <a href="#" class="nav-item" data-view="deudas">
                     <span class="icon">📋</span> Deudas
                 </a>
+                <a href="#" class="nav-item" data-view="ahorros">
+                    <span class="icon">🎯</span> Ahorros
+                </a>
                 <a href="#" class="nav-item" data-view="transacciones">
                     <span class="icon">📝</span> Transacciones
                 </a>
@@ -97,6 +100,20 @@
                                 <div class="kpi-content">
                                     <div class="kpi-label">Tasa Ahorro</div>
                                     <div class="kpi-value" id="kpi-ahorro">0%</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card" style="border-left-color: #8b5cf6;">
+                                <div class="kpi-icon">🏦</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-label">Saldo Cuentas</div>
+                                    <div class="kpi-value" id="kpi-saldo-cuentas">$0</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card" style="border-left-color: #ec4899;">
+                                <div class="kpi-icon">🎯</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-label">Total Ahorros</div>
+                                    <div class="kpi-value" id="kpi-total-ahorros">$0</div>
                                 </div>
                             </div>
                         </div>
@@ -280,6 +297,65 @@
                     <div class="list-section">
                         <h3>Deudas Activas</h3>
                         <div class="debt-details-container" id="list-deudas">
+                            <!-- Dinámico -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AHORROS VIEW -->
+                <div class="view" id="view-ahorros">
+                    <div class="view-header">
+                        <div class="kpi-container" style="margin-bottom: 30px;">
+                            <div class="kpi-card" style="border-left-color: #ec4899; flex: 1;">
+                                <div class="kpi-icon">🎯</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-label">Total Ahorros</div>
+                                    <div class="kpi-value" id="kpi-ahorros-total">$0</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card" style="border-left-color: #06b6d4; flex: 1;">
+                                <div class="kpi-icon">📊</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-label">Metas Activas</div>
+                                    <div class="kpi-value" id="kpi-metas-activas">0</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card" style="border-left-color: #10b981; flex: 1;">
+                                <div class="kpi-icon">✅</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-label">Metas Completadas</div>
+                                    <div class="kpi-value" id="kpi-metas-completadas">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-section">
+                        <h3>Registrar Nueva Meta</h3>
+                        <form id="form-meta-ahorro" class="form-container">
+                            <div class="form-group">
+                                <label>Descripción</label>
+                                <input type="text" id="meta-ahorro-descripcion" placeholder="Ej: Viaje a Cartagena" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Monto a Ahorrar ($)</label>
+                                <input type="number" id="meta-ahorro-monto" placeholder="0" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Monto Actual ($)</label>
+                                <input type="number" id="meta-ahorro-actual" placeholder="0" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha Meta</label>
+                                <input type="date" id="meta-ahorro-fecha" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Crear Meta</button>
+                        </form>
+                    </div>
+
+                    <div class="list-section">
+                        <h3>Mis Metas de Ahorro</h3>
+                        <div class="goals-list" id="list-metas-ahorros">
                             <!-- Dinámico -->
                         </div>
                     </div>
