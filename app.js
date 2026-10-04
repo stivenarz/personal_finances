@@ -35,6 +35,8 @@ function loadOfflineData() {
                     }
                 });
             }
+            // Fix transaction categories
+            fixTransactionCategories();
             // Save the migrated data back to localStorage
             saveOfflineData();
             return;
@@ -198,6 +200,7 @@ async function initApp() {
                 await fb.initializeAuth();
                 const allData = await fb.loadAllData();
                 APP.data = allData;
+                fixTransactionCategories();
                 renderCategories();
                 renderAccounts();
                 showNotification('🔵 Conectado a Firebase', 'success');
@@ -660,6 +663,40 @@ function showFirebaseStatus(message, type) {
 
 function setCurrentMonth() {
     document.getElementById('month-filter').value = APP.currentMonth;
+}
+
+function fixTransactionCategories() {
+    if (!APP.data.transactions) return;
+
+    let updated = false;
+    APP.data.transactions.forEach(trans => {
+        // Fix transactions with missing categories
+        if (!trans.category && trans.description) {
+            if (trans.description.startsWith('Pago de deuda:')) {
+                trans.category = 'Deuda';
+                updated = true;
+            } else if (trans.description.startsWith('Abono a meta:')) {
+                trans.category = 'Ahorros';
+                updated = true;
+            } else if (trans.description.startsWith('Traslado:')) {
+                trans.category = 'Traslado';
+                updated = true;
+            }
+        }
+    });
+
+    // Sync updated data to Firebase if online
+    if (updated && APP.isOnline && window.firebaseDB) {
+        APP.data.transactions.forEach(trans => {
+            if (trans.category === 'Deuda' || trans.category === 'Ahorros' || trans.category === 'Traslado') {
+                window.firebaseDB.updateData('transactions', trans.id, { category: trans.category }).catch(err =>
+                    console.error('Error updating transaction:', err)
+                );
+            }
+        });
+    } else if (updated) {
+        saveOfflineData();
+    }
 }
 
 // ============ VIEW MANAGEMENT ============
@@ -1570,7 +1607,7 @@ window.deleteGoal = async function(goalId) {
     if (!confirmed) return;
 
     APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
-    renderGoalsList();
+    renderSavingsGoalsList();
     updateDashboard();
 
     if (APP.isOnline && window.firebaseDB) {
@@ -1579,7 +1616,7 @@ window.deleteGoal = async function(goalId) {
         } catch (err) {
             console.error('Error deleting goal:', err);
             APP.data.goals.push(goal);
-            renderGoalsList();
+            renderSavingsGoalsList();
             updateDashboard();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
