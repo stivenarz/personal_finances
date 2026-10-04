@@ -1,18 +1,27 @@
 // Firebase Configuration
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, setDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, updateDoc, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // IMPORTANT: NO DEFAULT CONFIG - Each user must configure their own Firebase
-// Credentials are stored ONLY in localStorage, never hardcoded
+// Credentials are stored ONLY in localStorage as a single JSON object, never hardcoded
+
+// Database structure (only this should be hardcoded)
+export const DB_STRUCTURE = {
+  collections: ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals']
+};
 
 // Check if Firebase is configured
 export function isFirebaseConfigured() {
-  return !!(
-    localStorage.getItem('firebaseApiKey') &&
-    localStorage.getItem('firebaseProjectId') &&
-    localStorage.getItem('firebaseAuthDomain')
-  );
+  try {
+    const config = localStorage.getItem('firebaseConfig');
+    if (!config) return false;
+
+    const parsed = JSON.parse(config);
+    return !!(parsed.apiKey && parsed.projectId && parsed.authDomain);
+  } catch {
+    return false;
+  }
 }
 
 // Get configuration ONLY from localStorage (no defaults)
@@ -21,25 +30,26 @@ export function getFirebaseConfigValues() {
     return null;
   }
 
-  return {
-    apiKey: localStorage.getItem('firebaseApiKey'),
-    authDomain: localStorage.getItem('firebaseAuthDomain'),
-    projectId: localStorage.getItem('firebaseProjectId'),
-    storageBucket: localStorage.getItem('firebaseStorageBucket'),
-    messagingSenderId: localStorage.getItem('firebaseMessagingSenderId'),
-    appId: localStorage.getItem('firebaseAppId')
-  };
+  try {
+    return JSON.parse(localStorage.getItem('firebaseConfig'));
+  } catch {
+    return null;
+  }
 }
 
-// Guardar configuración completa en localStorage
+// Save configuration as single JSON in localStorage
 export function setFirebaseConfig(config) {
-  if (config.apiKey) localStorage.setItem('firebaseApiKey', config.apiKey);
-  if (config.authDomain) localStorage.setItem('firebaseAuthDomain', config.authDomain);
-  if (config.projectId) localStorage.setItem('firebaseProjectId', config.projectId);
-  if (config.storageBucket) localStorage.setItem('firebaseStorageBucket', config.storageBucket);
-  if (config.messagingSenderId) localStorage.setItem('firebaseMessagingSenderId', config.messagingSenderId);
-  if (config.appId) localStorage.setItem('firebaseAppId', config.appId);
-  console.log('Configuración Firebase guardada');
+  const firebaseConfig = {
+    apiKey: config.apiKey || '',
+    authDomain: config.authDomain || '',
+    projectId: config.projectId || '',
+    storageBucket: config.storageBucket || '',
+    messagingSenderId: config.messagingSenderId || '',
+    appId: config.appId || ''
+  };
+
+  localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
+  console.log('✅ Configuración Firebase guardada');
 }
 
 // Firebase instances - lazy initialized only if configured
@@ -109,8 +119,7 @@ export async function saveData(collectionName, data) {
   if (!data.id) throw new Error('El documento debe tener un ID');
 
   try {
-    const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-    const docRef = doc(db, userCollectionPath, data.id);
+    const docRef = doc(db, collectionName, data.id);
     await setDoc(docRef, {
       ...data,
       createdAt: new Date(),
@@ -127,8 +136,7 @@ export async function loadData(collectionName) {
   if (!currentUser) throw new Error('Usuario no autenticado');
 
   try {
-    const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-    const querySnapshot = await getDocs(collection(db, userCollectionPath));
+    const querySnapshot = await getDocs(collection(db, collectionName));
     const data = [];
     querySnapshot.forEach((doc) => {
       data.push({ id: doc.id, ...doc.data() });
@@ -144,8 +152,7 @@ export async function updateData(collectionName, docId, data) {
   if (!currentUser) throw new Error('Usuario no autenticado');
 
   try {
-    const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-    const docRef = doc(db, userCollectionPath, docId);
+    const docRef = doc(db, collectionName, docId);
     await updateDoc(docRef, {
       ...data,
       updatedAt: new Date()
@@ -161,8 +168,7 @@ export async function deleteData(collectionName, docId) {
   if (!currentUser) throw new Error('Usuario no autenticado');
 
   try {
-    const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-    await deleteDoc(doc(db, userCollectionPath, docId));
+    await deleteDoc(doc(db, collectionName, docId));
     return true;
   } catch (error) {
     console.error('Error eliminando datos:', error);
@@ -170,28 +176,6 @@ export async function deleteData(collectionName, docId) {
   }
 }
 
-// ============ MIGRATION ============
-export async function cleanOldData() {
-  if (!currentUser) throw new Error('Usuario no autenticado');
-
-  console.log('🧹 Limpiando datos antiguos...');
-  const collections = ['transactions', 'debts', 'accounts', 'categories', 'goals', 'debtPayments'];
-
-  for (const collectionName of collections) {
-    try {
-      const userCollectionPath = `users/${currentUser.uid}/${collectionName}`;
-      const querySnapshot = await getDocs(collection(db, userCollectionPath));
-
-      for (const doc of querySnapshot.docs) {
-        await deleteDoc(doc.ref);
-      }
-
-      console.log(`✓ Limpiada colección: ${collectionName}`);
-    } catch (error) {
-      console.error(`Error limpiando ${collectionName}:`, error);
-    }
-  }
-}
 
 // ============ SYNC ALL DATA ============
 export async function loadAllData() {
