@@ -687,22 +687,56 @@ function showView(viewName) {
 function handleAddExpense(e) {
     e.preventDefault();
 
+    const accountId = document.getElementById('gasto-cuenta').value;
+    const amount = parseFloat(document.getElementById('gasto-monto').value);
+    const categoryId = document.getElementById('gasto-categoria').value;
+
+    if (!categoryId) {
+        alert('❌ Selecciona una categoría');
+        return;
+    }
+
+    if (!accountId) {
+        alert('❌ Selecciona una cuenta');
+        return;
+    }
+
+    if (!amount || amount <= 0) {
+        alert('❌ Ingresa un monto válido');
+        return;
+    }
+
+    const account = APP.data.accounts.find(a => a.id === accountId);
+    if (!account) {
+        alert('❌ Cuenta no encontrada');
+        return;
+    }
+
+    if (account.balance < amount) {
+        alert(`❌ Saldo insuficiente. Disponible: $${formatNumber(account.balance)}, Requerido: $${formatNumber(amount)}`);
+        return;
+    }
+
     const expense = {
         id: 'exp-' + Date.now(),
         type: 'Egreso',
         date: document.getElementById('gasto-fecha').value,
-        category: document.getElementById('gasto-categoria').value,
+        category: categoryId,
         description: document.getElementById('gasto-descripcion').value,
-        amount: parseFloat(document.getElementById('gasto-monto').value),
-        account: document.getElementById('gasto-cuenta').value,
+        amount: amount,
+        account: accountId,
         timestamp: Date.now()
     };
 
     APP.data.transactions.push(expense);
+    account.balance -= amount;
 
     if (APP.isOnline && window.firebaseDB) {
         window.firebaseDB.saveData('transactions', expense).catch(err =>
             console.error('Error guardando en Firebase:', err)
+        );
+        window.firebaseDB.updateData('accounts', accountId, { balance: account.balance }).catch(err =>
+            console.error('Error actualizando cuenta:', err)
         );
     } else {
         saveOfflineData();
@@ -713,6 +747,7 @@ function handleAddExpense(e) {
 
     updateDashboard();
     renderExpensesList();
+    renderAccountsList();
     alert('✅ Gasto registrado correctamente');
 }
 
@@ -761,22 +796,45 @@ function renderExpensesList() {
 function handleAddIncome(e) {
     e.preventDefault();
 
+    const accountId = document.getElementById('ingreso-cuenta').value;
+    const amount = parseFloat(document.getElementById('ingreso-monto').value);
+
+    if (!accountId) {
+        alert('❌ Selecciona una cuenta');
+        return;
+    }
+
+    if (!amount || amount <= 0) {
+        alert('❌ Ingresa un monto válido');
+        return;
+    }
+
+    const account = APP.data.accounts.find(a => a.id === accountId);
+    if (!account) {
+        alert('❌ Cuenta no encontrada');
+        return;
+    }
+
     const income = {
         id: 'inc-' + Date.now(),
         type: 'Ingreso',
         date: document.getElementById('ingreso-fecha').value,
         incomeType: document.getElementById('ingreso-tipo').value,
         description: document.getElementById('ingreso-descripcion').value,
-        amount: parseFloat(document.getElementById('ingreso-monto').value),
-        account: document.getElementById('ingreso-cuenta').value,
+        amount: amount,
+        account: accountId,
         timestamp: Date.now()
     };
 
     APP.data.transactions.push(income);
+    account.balance += amount;
 
     if (APP.isOnline && window.firebaseDB) {
         window.firebaseDB.saveData('transactions', income).catch(err =>
             console.error('Error guardando en Firebase:', err)
+        );
+        window.firebaseDB.updateData('accounts', accountId, { balance: account.balance }).catch(err =>
+            console.error('Error actualizando cuenta:', err)
         );
     } else {
         saveOfflineData();
@@ -787,6 +845,7 @@ function handleAddIncome(e) {
 
     updateDashboard();
     renderIncomeList();
+    renderAccountsList();
     alert('✅ Ingreso registrado correctamente');
 }
 
@@ -806,11 +865,12 @@ function renderIncomeList() {
 
     const container = document.getElementById('list-ingresos');
     container.innerHTML = incomes.map(inc => {
+        const account = APP.data.accounts.find(a => a.id === inc.account);
         return `
             <div class="transaction-item ingreso">
                 <div class="transaction-date">${new Date(inc.date).toLocaleDateString()}</div>
                 <div class="transaction-desc">${inc.description}</div>
-                <div class="transaction-category">${inc.incomeType}</div>
+                <div class="transaction-category">${inc.incomeType} • ${account?.name || 'N/A'}</div>
                 <div class="transaction-amount positivo">+$${formatNumber(inc.amount)}</div>
                 <button class="btn btn-danger" onclick="deleteTransaction('${inc.id}')">Eliminar</button>
             </div>
