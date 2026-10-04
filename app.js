@@ -576,6 +576,12 @@ function setupEventListeners() {
 
     // Export
     document.getElementById('export-btn').addEventListener('click', exportToExcel);
+
+    // Delete all data button
+    const deleteAllBtn = document.getElementById('delete-all-data-btn');
+    if (deleteAllBtn) {
+        deleteAllBtn.addEventListener('click', handleDeleteAllData);
+    }
 }
 
 function setupGSheetEventListeners() {
@@ -2116,6 +2122,86 @@ function updateIncomeExpensesChart(transactions) {
             }
         }
     });
+}
+
+// ============ DELETE ALL DATA ============
+async function handleDeleteAllData() {
+    // First confirmation
+    const firstConfirm = confirm(
+        '⚠️ ADVERTENCIA\n\n' +
+        'Estás a punto de eliminar TODOS los datos de la aplicación:\n' +
+        '• Todas las transacciones\n' +
+        '• Todas las cuentas\n' +
+        '• Todas las categorías\n' +
+        '• Datos locales\n' +
+        '• Datos en Firebase (si está conectado)\n\n' +
+        '¿Estás seguro de que deseas continuar?'
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation with specific text
+    const userInput = prompt(
+        '⚠️ SEGUNDA CONFIRMACIÓN\n\n' +
+        'Escribe "BORRAR TODO" para confirmar el borrado irreversible de todos los datos:'
+    );
+
+    if (userInput !== 'BORRAR TODO') {
+        showNotification('❌ Operación cancelada', 'warning');
+        return;
+    }
+
+    try {
+        // Delete local data
+        localStorage.clear();
+        console.log('Cache local eliminado');
+
+        // Delete Firebase data
+        if (APP.isOnline && window.firebaseDB) {
+            const { getFirebaseInstance } = window.firebaseDB;
+            const { db } = getFirebaseInstance();
+
+            if (db) {
+                const collections = ['transactions', 'accounts', 'categories', 'debts', 'debtPayments', 'goals'];
+
+                for (const collectionName of collections) {
+                    try {
+                        const docs = await window.firebaseDB.loadData(collectionName);
+                        for (const doc of docs) {
+                            await window.firebaseDB.deleteData(collectionName, doc.id);
+                        }
+                        console.log(`Colección ${collectionName} eliminada`);
+                    } catch (err) {
+                        console.error(`Error eliminando ${collectionName}:`, err);
+                    }
+                }
+
+                showNotification('✅ Todos los datos han sido eliminados', 'success');
+            } else {
+                showNotification('⚠️ Datos locales eliminados (Firebase no conectado)', 'warning');
+            }
+        } else {
+            showNotification('✅ Datos locales eliminados', 'success');
+        }
+
+        // Reset app data
+        APP.data = {
+            transactions: [],
+            debts: [],
+            accounts: [],
+            categories: [],
+            goals: [],
+            debtPayments: []
+        };
+
+        // Reload page after a short delay
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    } catch (error) {
+        console.error('Error al borrar datos:', error);
+        showNotification('❌ Error al borrar los datos: ' + error.message, 'error');
+    }
 }
 
 // ============ EXPORT TO EXCEL ============
