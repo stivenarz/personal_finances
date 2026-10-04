@@ -357,16 +357,24 @@
 
                             <!-- Database Mode Toggle -->
                             <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-                                    <div>
-                                        <strong style="display: block; margin-bottom: 5px;">Base de Datos Activa</strong>
-                                        <span id="db-mode-status" style="color: var(--text-secondary); font-size: 14px;">Cargando...</span>
+                                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 15px;">
+                                    <div style="flex: 1;">
+                                        <strong style="display: block; margin-bottom: 10px;">Seleccionar Base de Datos</strong>
+                                        <div style="display: flex; gap: 15px;">
+                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                                <input type="radio" name="db-mode" value="local" id="db-mode-local" style="cursor: pointer; width: 18px; height: 18px;">
+                                                <span>⚫ Local</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                                <input type="radio" name="db-mode" value="firebase" id="db-mode-firebase" style="cursor: pointer; width: 18px; height: 18px;">
+                                                <span>🔵 Firebase</span>
+                                            </label>
+                                        </div>
+                                        <span id="db-mode-status" style="display: block; color: var(--text-secondary); font-size: 12px; margin-top: 8px;">Cargando...</span>
                                     </div>
-                                    <div style="display: flex; gap: 10px;">
-                                        <button type="button" class="btn btn-secondary" id="sync-data-btn" style="display: none;">
-                                            🔄 Sincronizar
-                                        </button>
-                                    </div>
+                                    <button type="button" class="btn btn-secondary" id="sync-data-btn" style="display: none; white-space: nowrap;">
+                                        🔄 Sincronizar
+                                    </button>
                                 </div>
                             </div>
 
