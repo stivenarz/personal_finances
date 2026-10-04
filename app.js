@@ -34,9 +34,17 @@ function loadOfflineData() {
                         acc.balance = Number(acc.balance);
                     }
                 });
-                // Save the migrated data back to localStorage
-                saveOfflineData();
             }
+            // Ensure all expense transactions have category property
+            if (APP.data.transactions) {
+                APP.data.transactions.forEach(trans => {
+                    if (trans.type === 'Egreso' && !trans.category) {
+                        trans.category = 'cat-other';
+                    }
+                });
+            }
+            // Save the migrated data back to localStorage
+            saveOfflineData();
             return;
         }
     } catch (error) {
@@ -228,11 +236,41 @@ async function initApp() {
     }
 
     setupFirebaseEventListeners();
+    initializeDefaultCategories();
     renderAccounts();
     renderCategories();
     setCurrentMonth();
     showView('dashboard');
     updateDashboard();
+}
+
+function initializeDefaultCategories() {
+    // Create default categories if none exist
+    if (!APP.data.categories || APP.data.categories.length === 0) {
+        const defaultCategories = [
+            { id: 'cat-groceries', name: 'Groceries', type: 'Egreso', budget: 0 },
+            { id: 'cat-utilities', name: 'Utilities', type: 'Egreso', budget: 0 },
+            { id: 'cat-transport', name: 'Transport', type: 'Egreso', budget: 0 },
+            { id: 'cat-entertainment', name: 'Entertainment', type: 'Egreso', budget: 0 },
+            { id: 'cat-health', name: 'Health', type: 'Egreso', budget: 0 },
+            { id: 'cat-shopping', name: 'Shopping', type: 'Egreso', budget: 0 },
+            { id: 'cat-other', name: 'Other', type: 'Egreso', budget: 0 },
+            { id: 'cat-work', name: 'Work Income', type: 'Ingreso', budget: 0 },
+            { id: 'cat-bonus', name: 'Bonus', type: 'Ingreso', budget: 0 },
+            { id: 'cat-investments', name: 'Investments', type: 'Ingreso', budget: 0 }
+        ];
+
+        APP.data.categories = defaultCategories;
+        saveOfflineData();
+
+        if (APP.isOnline && window.firebaseDB) {
+            defaultCategories.forEach(cat => {
+                window.firebaseDB.saveData('categories', cat).catch(err =>
+                    console.error('Error guardando categoría en Firebase:', err)
+                );
+            });
+        }
+    }
 }
 
 function setupMobileMenu() {
@@ -691,7 +729,6 @@ function showView(viewName) {
     } else if (viewName === 'configuracion') {
         renderAccountsList();
         renderCategoriesList();
-        renderGoalsList();
     }
 }
 
@@ -1420,7 +1457,7 @@ function renderAccountsList() {
                 <div class="account-name">${acc.name}</div>
                 <div class="account-type">${acc.type}</div>
             </div>
-            <div></div>
+            <div class="account-balance">$${formatNumber(acc.balance || 0)}</div>
             <button class="btn btn-danger" onclick="deleteAccount('${acc.id}')">Eliminar</button>
         </div>
     `).join('');
