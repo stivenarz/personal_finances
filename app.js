@@ -25,13 +25,17 @@ function loadOfflineData() {
         const offlineData = localStorage.getItem('app_offline_data');
         if (offlineData) {
             APP.data = JSON.parse(offlineData);
-            // Ensure all accounts have a balance property (migrate from null to 0)
+            // Ensure all accounts have a valid numeric balance property
             if (APP.data.accounts) {
                 APP.data.accounts.forEach(acc => {
-                    if (acc.balance === null || acc.balance === undefined) {
+                    if (acc.balance === null || acc.balance === undefined || isNaN(acc.balance)) {
                         acc.balance = 0;
+                    } else {
+                        acc.balance = Number(acc.balance);
                     }
                 });
+                // Save the migrated data back to localStorage
+                saveOfflineData();
             }
             return;
         }
