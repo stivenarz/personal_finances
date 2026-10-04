@@ -26,7 +26,7 @@ function loadOfflineData() {
         if (offlineData) {
             APP.data = JSON.parse(offlineData);
             // Ensure all accounts have a valid numeric balance property
-            if (APP.data.accounts) {
+            if (APP.data.accounts && APP.data.accounts.length > 0) {
                 APP.data.accounts.forEach(acc => {
                     if (acc.balance === null || acc.balance === undefined || isNaN(acc.balance)) {
                         acc.balance = 0;
@@ -36,7 +36,7 @@ function loadOfflineData() {
                 });
             }
             // Ensure all expense transactions have category property
-            if (APP.data.transactions) {
+            if (APP.data.transactions && APP.data.transactions.length > 0) {
                 APP.data.transactions.forEach(trans => {
                     if (trans.type === 'Egreso' && !trans.category) {
                         trans.category = 'cat-other';
@@ -1451,16 +1451,21 @@ function renderAccounts() {
 
 function renderAccountsList() {
     const container = document.getElementById('list-cuentas');
-    container.innerHTML = APP.data.accounts.map(acc => `
+    console.log('renderAccountsList - accounts:', JSON.stringify(APP.data.accounts, null, 2));
+    container.innerHTML = APP.data.accounts.map(acc => {
+        const balance = acc.balance || 0;
+        console.log(`Account ${acc.name} balance: ${balance}`);
+        return `
         <div class="account-item">
             <div>
                 <div class="account-name">${acc.name}</div>
                 <div class="account-type">${acc.type}</div>
             </div>
-            <div class="account-balance">$${formatNumber(acc.balance || 0)}</div>
+            <div class="account-balance">$${formatNumber(balance)}</div>
             <button class="btn btn-danger" onclick="deleteAccount('${acc.id}')">Eliminar</button>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 window.deleteAccount = async function(accountId) {
