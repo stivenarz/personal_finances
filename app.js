@@ -1,5 +1,6 @@
 const APP = {
     currentMonth: new Date().toISOString().slice(0, 7),
+    isOnline: false,
     data: {
         transactions: [],
         debts: [],
@@ -18,47 +19,106 @@ const APP = {
     }
 };
 
+// ============ OFFLINE SUPPORT ============
+function loadOfflineData() {
+    try {
+        const offlineData = localStorage.getItem('app_offline_data');
+        if (offlineData) {
+            APP.data = JSON.parse(offlineData);
+            console.log('📦 Datos offline cargados desde localStorage');
+            return;
+        }
+    } catch (error) {
+        console.error('Error cargando datos offline:', error);
+    }
+    // If no offline data, will use defaults
+}
+
+function saveOfflineData() {
+    try {
+        localStorage.setItem('app_offline_data', JSON.stringify(APP.data));
+        console.log('💾 Datos offline guardados');
+    } catch (error) {
+        console.error('Error guardando datos offline:', error);
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#FF9800' : '#2196F3'};
+        color: white;
+        border-radius: 4px;
+        z-index: 10000;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => notification.remove(), 5000);
+}
+
 // ============ INITIALIZATION ============
 async function initApp() {
     const spinner = document.getElementById('loading-spinner');
 
-    try {
-        // Inicializar Firebase primero
-        await import('./firebase-config.js').then(async (fb) => {
-            window.firebaseDB = fb;
-            console.log('Firebase inicializado');
+    await import('./firebase-config.js').then(async (fb) => {
+        window.firebaseDB = fb;
 
-            // Inicializar autenticación
-            await fb.initializeAuth();
-            console.log('Autenticación completada');
+        // Check if Firebase is configured
+        if (fb.isFirebaseConfigured()) {
+            console.log('🔵 Firebase configured - ONLINE MODE');
+            APP.isOnline = true;
 
-            // Limpiar datos antiguos (migración)
-            await fb.cleanOldData();
-            console.log('Datos antiguos limpiados');
+            try {
+                // Initialize Firebase with user's credentials
+                const initialized = fb.initializeFirebase();
+                if (!initialized) {
+                    throw new Error('Failed to initialize Firebase');
+                }
 
-            // Cargar datos desde Firebase
-            const allData = await fb.loadAllData();
-            APP.data = allData;
-            console.log('Datos cargados desde Firebase');
-        });
-    } catch (error) {
-        console.error('Error inicializando Firebase:', error);
-        // Usar datos por defecto si falla
-        loadDataFromStorage();
-    }
+                // Initialize authentication
+                await fb.initializeAuth();
+                console.log('✅ Autenticación completada');
 
-    // Google Sheets legacy - ya no usado, Firebase es el nuevo backend
-    // loadGSheetConfig();
-    // setupGSheetEventListeners();
+                // Clean old data (migration)
+                await fb.cleanOldData();
+
+                // Load data from Firebase
+                const allData = await fb.loadAllData();
+                APP.data = allData;
+                console.log('✅ Datos cargados desde Firebase');
+
+                showNotification('🔵 Conectado a Firebase', 'success');
+            } catch (error) {
+                console.error('❌ Error con Firebase:', error);
+                APP.isOnline = false;
+                loadOfflineData();
+                showNotification('⚠️ Error conectando a Firebase. Modo offline.', 'warning');
+            }
+        } else {
+            console.log('⚫ Firebase NOT configured - OFFLINE MODE');
+            APP.isOnline = false;
+            loadOfflineData();
+            showNotification('⚠️ Firebase no configurado. Modo offline.', 'warning');
+        }
+    });
 
     await initializeDefaultData();
     setupEventListeners();
     setupMobileMenu();
 
-    // Ocultar spinner después de cargar
+    // Hide spinner after loading
     if (spinner) {
         spinner.classList.add('hidden');
     }
+
     setupFirebaseEventListeners();
     renderAccounts();
     renderCategories();
