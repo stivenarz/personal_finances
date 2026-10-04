@@ -754,6 +754,7 @@ function handleAddExpense(e) {
     document.getElementById('gasto-fecha').valueAsDate = new Date();
 
     updateDashboard();
+    renderAccounts();
     renderExpensesList();
     renderAccountsList();
     alert('✅ Gasto registrado correctamente');
@@ -852,6 +853,7 @@ function handleAddIncome(e) {
     document.getElementById('ingreso-fecha').valueAsDate = new Date();
 
     updateDashboard();
+    renderAccounts();
     renderIncomeList();
     renderAccountsList();
     alert('✅ Ingreso registrado correctamente');
