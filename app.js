@@ -160,24 +160,29 @@ function loadDataFromStorage() {
 }
 
 async function saveDataToFirebase(collectionName, data) {
+    if (!APP.isOnline) {
+        // Modo offline: guardar en localStorage
+        saveOfflineData();
+        console.log('💾 Guardado en localStorage (offline)');
+        return;
+    }
+
     if (!window.firebaseDB) {
-        console.warn('Firebase no inicializado, guardando en localStorage');
+        console.warn('Firebase no disponible');
+        saveOfflineData();
         return;
     }
 
     try {
-        // Guardar en Firebase de forma asíncrona
-        setTimeout(async () => {
-            if (data.id) {
-                // Actualizar documento existente
-                await window.firebaseDB.updateData(collectionName, data.id, data);
-            } else {
-                // Crear nuevo documento
-                await window.firebaseDB.saveData(collectionName, data);
-            }
-        }, 0);
+        if (data.id) {
+            await window.firebaseDB.updateData(collectionName, data.id, data);
+        } else {
+            await window.firebaseDB.saveData(collectionName, data);
+        }
+        console.log('✅ Guardado en Firebase');
     } catch (error) {
         console.error('Error guardando en Firebase:', error);
+        saveOfflineData();
     }
 }
 
@@ -829,7 +834,7 @@ window.deleteDebt = async function(debtId) {
     updateDashboard();
     renderDebtsList();
 
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('debts', debtId);
             console.log('✅ Deuda eliminada de Firebase:', debtId);
@@ -840,6 +845,9 @@ window.deleteDebt = async function(debtId) {
             renderDebtsList();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
+    } else {
+        saveOfflineData();
+        console.log('💾 Deuda eliminada (offline)');
     }
 }
 
@@ -857,7 +865,7 @@ window.deleteTransaction = async function(transId) {
     renderIncomeList();
     renderTransactionsList();
 
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('transactions', transId);
             console.log('✅ Transacción eliminada de Firebase:', transId);
@@ -870,6 +878,9 @@ window.deleteTransaction = async function(transId) {
             renderTransactionsList();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
+    } else {
+        saveOfflineData();
+        console.log('💾 Transacción eliminada (offline)');
     }
 }
 
@@ -1001,7 +1012,7 @@ window.deleteAccount = async function(accountId) {
     renderAccountsList();
     renderAccounts();
 
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('accounts', accountId);
             console.log('✅ Cuenta eliminada de Firebase:', accountId);
@@ -1012,6 +1023,10 @@ window.deleteAccount = async function(accountId) {
             renderAccounts();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
+    } else {
+        // Modo offline: guardar en localStorage
+        saveOfflineData();
+        console.log('💾 Cuenta eliminada (offline)');
     }
 }
 
@@ -1073,7 +1088,7 @@ window.deleteCategory = async function(categoryId) {
     renderCategoriesList();
     renderCategories();
 
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('categories', categoryId);
             console.log('✅ Categoría eliminada de Firebase:', categoryId);
@@ -1084,6 +1099,9 @@ window.deleteCategory = async function(categoryId) {
             renderCategories();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
+    } else {
+        saveOfflineData();
+        console.log('💾 Categoría eliminada (offline)');
     }
 }
 
@@ -1135,7 +1153,7 @@ window.deleteGoal = async function(goalId) {
     renderGoalsList();
     updateDashboard();
 
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('goals', goalId);
             console.log('✅ Meta eliminada de Firebase:', goalId);
@@ -1146,6 +1164,9 @@ window.deleteGoal = async function(goalId) {
             updateDashboard();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
+    } else {
+        saveOfflineData();
+        console.log('💾 Meta eliminada (offline)');
     }
 }
 
