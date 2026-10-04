@@ -670,20 +670,24 @@ function fixTransactionCategories() {
 
     let updated = false;
     APP.data.transactions.forEach(trans => {
-        // Fix transactions with missing categories
-        if (!trans.category && trans.description) {
+        // Fix transactions with missing or invalid categories
+        if ((trans.category === null || trans.category === undefined || trans.category === '') && trans.description) {
             if (trans.description.startsWith('Pago de deuda:')) {
                 trans.category = 'Deuda';
                 updated = true;
+                console.log(`[Category Fix] Set to 'Deuda' for: ${trans.description}`);
             } else if (trans.description.startsWith('Abono a meta:')) {
                 trans.category = 'Ahorros';
                 updated = true;
+                console.log(`[Category Fix] Set to 'Ahorros' for: ${trans.description}`);
             } else if (trans.description.startsWith('Traslado:')) {
                 trans.category = 'Traslado';
                 updated = true;
+                console.log(`[Category Fix] Set to 'Traslado' for: ${trans.description}`);
             }
         }
     });
+    console.log(`[Category Fix] Transactions fixed: ${updated}`);
 
     // Sync updated data to Firebase if online
     if (updated && APP.isOnline && window.firebaseDB) {
