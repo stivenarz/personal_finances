@@ -25,7 +25,8 @@
       "Bash(pkill -f \"http.server\")",
       "Bash(sleep 1 && cd /Volumes/BackUp/sites/personal-finances && python3 -m http.server 8000 > /tmp/server.log 2>&1 & *)",
       "Bash(curl -s http://localhost:8000/styles.css)",
-      "Bash(curl -I http://localhost:8000/styles.css)"
+      "Bash(curl -I http://localhost:8000/styles.css)",
+      "Bash(curl -s http://localhost:8000/app.js)"
     ]
   }
 }
