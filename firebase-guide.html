@@ -263,8 +263,8 @@ const firebaseConfig = {<br>
 rules_version = '2';<br>
 service cloud.firestore {<br>
 &nbsp;&nbsp;match /databases/{database}/documents {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;match /users/{userId}/{document=**} {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth.uid == userId;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;match /{collection=**} {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null;<br>
 &nbsp;&nbsp;&nbsp;&nbsp;}<br>
 &nbsp;&nbsp;}<br>
 }
@@ -273,7 +273,10 @@ service cloud.firestore {<br>
                     <li>Haz clic en <span class="highlight">Publicar</span></li>
                 </ol>
                 <div class="success">
-                    <strong>✅ Ahora solo cada usuario puede ver sus propios datos</strong>
+                    <strong>✅ Ahora cualquier usuario autenticado puede acceder a los datos</strong>
+                </div>
+                <div class="warning">
+                    <strong>ℹ️ Nota de Seguridad:</strong> Esta configuración permite que todos los usuarios autenticados vean y modifiquen los datos. Para una app multi-usuario segura, deberías implementar reglas más restrictivas basadas en el UID del usuario. Por ahora, todos los usuarios comparten la misma base de datos.
                 </div>
             </div>
 
