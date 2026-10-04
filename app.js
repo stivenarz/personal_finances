@@ -1556,6 +1556,7 @@ function handleAddSavingsGoal(e) {
 
     e.target.reset();
     renderSavingsGoalsList();
+    updateSavingsKpis();
     updateDashboard();
     showNotification('✅ Meta de ahorro creada', 'success');
 }
@@ -1575,25 +1576,169 @@ function renderSavingsGoalsList() {
         const isCompleted = goal.currentAmount >= goal.targetAmount;
 
         return `
-            <div class="goal-card" style="border-left: 4px solid ${isCompleted ? '#10b981' : '#3b82f6'};">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div class="goal-card" style="border-left: 4px solid ${isCompleted ? '#10b981' : '#3b82f6'}; padding: 20px; margin-bottom: 15px; background: white; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 15px;">
                     <div style="flex: 1;">
-                        <h4 style="margin: 0 0 10px 0; color: #333;">${goal.description}</h4>
-                        <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                        <h4 style="margin: 0 0 12px 0; color: #333; font-size: 16px;">${goal.description}</h4>
+                        <p style="margin: 8px 0; color: #666; font-size: 14px;">
                             $${formatNumber(goal.currentAmount)} / $${formatNumber(goal.targetAmount)}
                         </p>
-                        ${goal.deadline ? `<p style="margin: 5px 0; color: #666; font-size: 14px;">Plazo: ${daysLeft} días</p>` : ''}
+                        ${goal.deadline ? `<p style="margin: 8px 0; color: #999; font-size: 13px;">Plazo: ${daysLeft} días</p>` : ''}
                     </div>
-                    <button class="btn btn-sm btn-danger" onclick="deleteSavingsGoal('${goal.id}')" style="margin-left: 10px;">Eliminar</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-sm" onclick="showSavingsAbono('${goal.id}')">+ Abonar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSavingsGoal('${goal.id}')">Eliminar</button>
+                    </div>
                 </div>
-                <div style="width: 100%; background: #f0f0f0; border-radius: 4px; height: 8px; margin-top: 10px; overflow: hidden;">
+                <div style="width: 100%; background: #f0f0f0; border-radius: 4px; height: 8px; margin-top: 15px; overflow: hidden;">
                     <div style="width: ${Math.min(progress, 100)}%; height: 100%; background: ${isCompleted ? '#10b981' : '#3b82f6'};"></div>
                 </div>
-                <p style="margin: 8px 0 0 0; text-align: right; color: #666; font-size: 12px;">${progress.toFixed(0)}% completado</p>
+                <p style="margin: 10px 0 0 0; text-align: right; color: #666; font-size: 12px;">${progress.toFixed(0)}% completado</p>
             </div>
         `;
     }).join('');
 }
+
+window.showSavingsAbono = function(goalId) {
+    const goal = APP.data.goals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    const accountOptions = APP.data.accounts.map(acc =>
+        `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance)})</option>`
+    ).join('');
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-height: 80vh;
+        overflow-y: auto;
+    `;
+
+    content.innerHTML = `
+        <h2 style="margin-top: 0; color: #333;">Abonar a Meta de Ahorro</h2>
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+            <strong>Meta:</strong> ${goal.description}<br>
+            <strong>Ahorrado:</strong> $${formatNumber(goal.currentAmount)} / $${formatNumber(goal.targetAmount)}<br>
+            <strong>Falta:</strong> $${formatNumber(Math.max(0, goal.targetAmount - goal.currentAmount))}
+        </p>
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Seleccionar Cuenta</label>
+            <select id="abonoAccount" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <option value="">-- Selecciona una cuenta --</option>
+                ${accountOptions}
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Monto de Ahorro</label>
+            <input type="number" id="abonoAmount" placeholder="Monto" min="0" step="0.01"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button id="confirmAbono" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Registrar Abono</button>
+            <button id="cancelAbono" style="flex: 1; padding: 12px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    const amountInput = document.getElementById('abonoAmount');
+    amountInput.focus();
+
+    document.getElementById('confirmAbono').addEventListener('click', async () => {
+        const accountId = document.getElementById('abonoAccount').value;
+        const amount = parseFloat(amountInput.value);
+
+        if (!accountId) {
+            alert('❌ Selecciona una cuenta');
+            return;
+        }
+
+        if (!amount || isNaN(amount) || amount <= 0) {
+            alert('❌ Ingresa un monto válido');
+            return;
+        }
+
+        const account = APP.data.accounts.find(a => a.id === accountId);
+        if (!account || account.balance < amount) {
+            alert('❌ Saldo insuficiente en la cuenta');
+            return;
+        }
+
+        // Update savings goal
+        goal.currentAmount += amount;
+
+        // Create egreso transaction
+        const transaction = {
+            id: 'trans-' + Date.now(),
+            type: 'Egreso',
+            date: new Date().toISOString().split('T')[0],
+            category: 'Ahorros',
+            description: `Abono a meta: ${goal.description}`,
+            amount: amount,
+            account: accountId,
+            timestamp: Date.now()
+        };
+
+        APP.data.transactions.push(transaction);
+
+        // Update account balance
+        account.balance -= amount;
+
+        // Save locally
+        saveOfflineData();
+
+        // Sync to Firebase if online
+        if (APP.isOnline && window.firebaseDB) {
+            try {
+                await window.firebaseDB.updateData('goals', goalId, { currentAmount: goal.currentAmount });
+                await window.firebaseDB.saveData('transactions', transaction);
+                await window.firebaseDB.updateData('accounts', accountId, { balance: account.balance });
+            } catch (err) {
+                console.error('Error saving to Firebase:', err);
+                showNotification('⚠️ Sincronización parcial: datos guardados localmente', 'warning');
+            }
+        }
+
+        modal.remove();
+        updateDashboard();
+        updateSavingsKpis();
+        renderSavingsGoalsList();
+        renderAccountsList();
+        renderTransactionsList();
+        showNotification('✅ Abono registrado correctamente', 'success');
+    });
+
+    document.getElementById('cancelAbono').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+};
 
 window.deleteSavingsGoal = async function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
@@ -1604,6 +1749,7 @@ window.deleteSavingsGoal = async function(goalId) {
 
     APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
     renderSavingsGoalsList();
+    updateSavingsKpis();
     updateDashboard();
 
     if (APP.isOnline && window.firebaseDB) {
