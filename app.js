@@ -87,9 +87,6 @@ async function initApp() {
                 await fb.initializeAuth();
                 console.log('✅ Autenticación completada');
 
-                // Clean old data (migration)
-                await fb.cleanOldData();
-
                 // Load data from Firebase
                 const allData = await fb.loadAllData();
                 APP.data = allData;
@@ -110,7 +107,6 @@ async function initApp() {
         }
     });
 
-    await initializeDefaultData();
     setupEventListeners();
     setupMobileMenu();
 
@@ -207,52 +203,6 @@ function saveGSheetConfig(scriptUrl) {
     }, 1000);
 }
 
-async function initializeDefaultData() {
-    const accountsLoaded = APP.data.accounts.length > 0;
-    const categoriesLoaded = APP.data.categories.length > 0;
-
-    if (!accountsLoaded) {
-        APP.data.accounts = [
-            { id: 'acc-001', name: 'Ahorros', type: 'Ahorros' },
-            { id: 'acc-002', name: 'Corriente', type: 'Corriente' },
-            { id: 'acc-003', name: 'Efectivo', type: 'Efectivo' }
-        ];
-        // Guardar cuentas por defecto en Firebase
-        if (window.firebaseDB) {
-            for (const account of APP.data.accounts) {
-                try {
-                    await window.firebaseDB.saveData('accounts', account);
-                } catch (err) {
-                    console.error('Error guardando cuenta por defecto:', err);
-                }
-            }
-        }
-    }
-
-    if (!categoriesLoaded) {
-        APP.data.categories = [
-            { id: 'cat-001', name: 'Alimentación', type: 'Egreso', budget: 1000000 },
-            { id: 'cat-002', name: 'Transporte', type: 'Egreso', budget: 80000 },
-            { id: 'cat-003', name: 'Vivienda', type: 'Egreso', budget: 1350000 },
-            { id: 'cat-004', name: 'Salud', type: 'Egreso', budget: 0 },
-            { id: 'cat-005', name: 'Entretenimiento', type: 'Egreso', budget: 320000 },
-            { id: 'cat-006', name: 'Ahorro', type: 'Egreso', budget: 0 },
-            { id: 'cat-007', name: 'Inversiones', type: 'Egreso', budget: 2000000 },
-            { id: 'cat-008', name: 'Nómina', type: 'Ingreso', budget: 8948840 },
-            { id: 'cat-009', name: 'Extras', type: 'Ingreso', budget: 1500000 }
-        ];
-        // Guardar categorías por defecto en Firebase
-        if (window.firebaseDB) {
-            for (const category of APP.data.categories) {
-                try {
-                    await window.firebaseDB.saveData('categories', category);
-                } catch (err) {
-                    console.error('Error guardando categoría por defecto:', err);
-                }
-            }
-        }
-    }
-}
 
 async function saveDataToStorage() {
     // Los datos se guardan automáticamente en Firebase
@@ -472,48 +422,23 @@ function setupFirebaseEventListeners() {
     }
 
     // Cargar configuración guardada si existe
-    const config = window.firebaseDB?.getFirebaseConfigValues?.() || {};
+    const config = window.firebaseDB?.getFirebaseConfigValues?.();
+    if (config) {
+        const inputs = [
+            { id: 'firebase-api-key', key: 'apiKey' },
+            { id: 'firebase-project-id', key: 'projectId' },
+            { id: 'firebase-auth-domain', key: 'authDomain' },
+            { id: 'firebase-storage-bucket', key: 'storageBucket' },
+            { id: 'firebase-messaging-sender-id', key: 'messagingSenderId' },
+            { id: 'firebase-app-id', key: 'appId' }
+        ];
 
-    if (config.apiKey) {
-        const apiKeyInput = document.getElementById('firebase-api-key');
-        if (apiKeyInput) {
-            apiKeyInput.value = config.apiKey;
-        }
-    }
-
-    if (config.projectId) {
-        const projectIdInput = document.getElementById('firebase-project-id');
-        if (projectIdInput) {
-            projectIdInput.value = config.projectId;
-        }
-    }
-
-    if (config.authDomain) {
-        const authDomainInput = document.getElementById('firebase-auth-domain');
-        if (authDomainInput) {
-            authDomainInput.value = config.authDomain;
-        }
-    }
-
-    if (config.storageBucket) {
-        const storageBucketInput = document.getElementById('firebase-storage-bucket');
-        if (storageBucketInput) {
-            storageBucketInput.value = config.storageBucket;
-        }
-    }
-
-    if (config.messagingSenderId) {
-        const messagingSenderIdInput = document.getElementById('firebase-messaging-sender-id');
-        if (messagingSenderIdInput) {
-            messagingSenderIdInput.value = config.messagingSenderId;
-        }
-    }
-
-    if (config.appId) {
-        const appIdInput = document.getElementById('firebase-app-id');
-        if (appIdInput) {
-            appIdInput.value = config.appId;
-        }
+        inputs.forEach(({ id, key }) => {
+            const input = document.getElementById(id);
+            if (input && config[key]) {
+                input.value = config[key];
+            }
+        });
     }
 }
 
