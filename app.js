@@ -508,11 +508,12 @@ function handleAddExpense(e) {
 
     APP.data.transactions.push(expense);
 
-    // Guardar en Firebase
-    if (window.firebaseDB) {
+    if (APP.isOnline && window.firebaseDB) {
         window.firebaseDB.saveData('transactions', expense).catch(err =>
             console.error('Error guardando en Firebase:', err)
         );
+    } else {
+        saveOfflineData();
     }
 
     e.target.reset();
@@ -580,7 +581,14 @@ function handleAddIncome(e) {
     };
 
     APP.data.transactions.push(income);
-    if (window.firebaseDB) { window.firebaseDB.saveData('transactions', income); }
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('transactions', income).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
 
     e.target.reset();
     document.getElementById('ingreso-fecha').valueAsDate = new Date();
@@ -647,7 +655,14 @@ function handleAddDebt(e) {
     };
 
     APP.data.debts.push(debt);
-    if (window.firebaseDB) { window.firebaseDB.saveData('debts', debt); }
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('debts', debt).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
 
     e.target.reset();
     updateDashboard();
@@ -887,7 +902,14 @@ function handleAddAccount(e) {
     };
 
     APP.data.accounts.push(account);
-    if (window.firebaseDB) { window.firebaseDB.saveData('accounts', account); }
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('accounts', account).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
 
     e.target.reset();
     renderAccounts();
@@ -966,7 +988,14 @@ function handleAddCategory(e) {
     };
 
     APP.data.categories.push(category);
-    if (window.firebaseDB) { window.firebaseDB.saveData('categories', category); }
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('categories', category).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
 
     e.target.reset();
     renderCategories();
@@ -1042,7 +1071,14 @@ function handleAddGoal(e) {
     };
 
     APP.data.goals.push(goal);
-    if (window.firebaseDB) { window.firebaseDB.saveData('goals', goal); }
+
+    if (APP.isOnline && window.firebaseDB) {
+        window.firebaseDB.saveData('goals', goal).catch(err =>
+            console.error('Error guardando en Firebase:', err)
+        );
+    } else {
+        saveOfflineData();
+    }
 
     e.target.reset();
     renderGoalsList();
