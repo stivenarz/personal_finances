@@ -35,14 +35,6 @@ function loadOfflineData() {
                     }
                 });
             }
-            // Ensure all expense transactions have category property
-            if (APP.data.transactions && APP.data.transactions.length > 0) {
-                APP.data.transactions.forEach(trans => {
-                    if (trans.type === 'Egreso' && !trans.category) {
-                        trans.category = 'cat-other';
-                    }
-                });
-            }
             // Save the migrated data back to localStorage
             saveOfflineData();
             return;
@@ -206,7 +198,6 @@ async function initApp() {
                 await fb.initializeAuth();
                 const allData = await fb.loadAllData();
                 APP.data = allData;
-                initializeDefaultCategories();
                 renderCategories();
                 renderAccounts();
                 showNotification('🔵 Conectado a Firebase', 'success');
@@ -214,7 +205,6 @@ async function initApp() {
                 console.error('Firebase error:', error);
                 APP.isOnline = false;
                 loadOfflineData();
-                initializeDefaultCategories();
                 renderCategories();
                 renderAccounts();
                 showNotification('⚠️ Error conectando a Firebase. Modo offline.', 'warning');
@@ -222,7 +212,6 @@ async function initApp() {
         } else {
             APP.isOnline = false;
             loadOfflineData();
-            initializeDefaultCategories();
             renderCategories();
             renderAccounts();
             if (userPreference === 'local') {
@@ -248,45 +237,6 @@ async function initApp() {
     setCurrentMonth();
     showView('dashboard');
     updateDashboard();
-}
-
-function initializeDefaultCategories() {
-    // Create default categories if none exist
-    const hasExpenseCategories = APP.data.categories && APP.data.categories.some(c => c.type === 'Egreso');
-    const hasIncomeCategories = APP.data.categories && APP.data.categories.some(c => c.type === 'Ingreso');
-
-    if (!hasExpenseCategories || !hasIncomeCategories) {
-        const defaultCategories = [
-            { id: 'cat-groceries', name: 'Groceries', type: 'Egreso', budget: 0 },
-            { id: 'cat-utilities', name: 'Utilities', type: 'Egreso', budget: 0 },
-            { id: 'cat-transport', name: 'Transport', type: 'Egreso', budget: 0 },
-            { id: 'cat-entertainment', name: 'Entertainment', type: 'Egreso', budget: 0 },
-            { id: 'cat-health', name: 'Health', type: 'Egreso', budget: 0 },
-            { id: 'cat-shopping', name: 'Shopping', type: 'Egreso', budget: 0 },
-            { id: 'cat-other', name: 'Other', type: 'Egreso', budget: 0 },
-            { id: 'cat-work', name: 'Work Income', type: 'Ingreso', budget: 0 },
-            { id: 'cat-bonus', name: 'Bonus', type: 'Ingreso', budget: 0 },
-            { id: 'cat-investments', name: 'Investments', type: 'Ingreso', budget: 0 }
-        ];
-
-        // Filter out categories that already exist
-        const existingIds = new Set(APP.data.categories.map(c => c.id));
-        const newCategories = defaultCategories.filter(cat => !existingIds.has(cat.id));
-
-        if (newCategories.length > 0) {
-            APP.data.categories.push(...newCategories);
-            console.log('Added default categories:', newCategories.length);
-            saveOfflineData();
-
-            if (APP.isOnline && window.firebaseDB) {
-                newCategories.forEach(cat => {
-                    window.firebaseDB.saveData('categories', cat).catch(err =>
-                        console.error('Error guardando categoría en Firebase:', err)
-                    );
-                });
-            }
-        }
-    }
 }
 
 function setupMobileMenu() {
@@ -2020,9 +1970,26 @@ function updateExpensesByCategoryChart(transactions) {
     const categoryData = {};
 
     expenses.forEach(exp => {
-        const cat = APP.data.categories.find(c => c.id === exp.category);
-        const name = cat?.name || 'Otro';
-        categoryData[name] = (categoryData[name] || 0) + exp.amount;
+        let categoryName = 'Otro';
+
+        // If there's an explicit category, use it
+        if (exp.category) {
+            const cat = APP.data.categories.find(c => c.id === exp.category);
+            if (cat) {
+                categoryName = cat.name;
+            }
+        } else {
+            // If no explicit category, try to extract from description
+            if (exp.description.startsWith('Pago de deuda:')) {
+                categoryName = 'Pago de deuda';
+            } else if (exp.description.startsWith('Abono a meta:')) {
+                categoryName = 'Abono a meta';
+            } else if (exp.description.startsWith('Traslado:')) {
+                categoryName = 'Traslado';
+            }
+        }
+
+        categoryData[categoryName] = (categoryData[categoryName] || 0) + exp.amount;
     });
 
     const ctx = document.getElementById('chart-gastos-categoria').getContext('2d');
