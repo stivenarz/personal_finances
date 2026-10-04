@@ -25,26 +25,22 @@ function loadOfflineData() {
         const offlineData = localStorage.getItem('app_offline_data');
         if (offlineData) {
             APP.data = JSON.parse(offlineData);
-            console.log('📦 Datos offline cargados desde localStorage');
             return;
         }
     } catch (error) {
-        console.error('Error cargando datos offline:', error);
+        console.error('Error loading offline data:', error);
     }
-    // If no offline data, will use defaults
 }
 
 function saveOfflineData() {
     try {
         localStorage.setItem('app_offline_data', JSON.stringify(APP.data));
-        console.log('💾 Datos offline guardados');
     } catch (error) {
-        console.error('Error guardando datos offline:', error);
+        console.error('Error saving offline data:', error);
     }
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -64,6 +60,19 @@ function showNotification(message, type = 'info') {
     setTimeout(() => notification.remove(), 5000);
 }
 
+function updateDatabaseModeStatus() {
+    const statusEl = document.getElementById('db-mode-status');
+    const syncBtn = document.getElementById('sync-data-btn');
+
+    if (APP.isOnline) {
+        statusEl.textContent = '🔵 Usando Firebase (Nube)';
+        if (syncBtn) syncBtn.style.display = 'none';
+    } else {
+        statusEl.textContent = '⚫ Usando Base de Datos Local';
+        if (syncBtn) syncBtn.style.display = 'inline-block';
+    }
+}
+
 // ============ INITIALIZATION ============
 async function initApp() {
     const spinner = document.getElementById('loading-spinner');
@@ -73,34 +82,25 @@ async function initApp() {
 
         // Check if Firebase is configured
         if (fb.isFirebaseConfigured()) {
-            console.log('🔵 Firebase configured - ONLINE MODE');
             APP.isOnline = true;
 
             try {
-                // Initialize Firebase with user's credentials
                 const initialized = fb.initializeFirebase();
                 if (!initialized) {
                     throw new Error('Failed to initialize Firebase');
                 }
 
-                // Initialize authentication
                 await fb.initializeAuth();
-                console.log('✅ Autenticación completada');
-
-                // Load data from Firebase
                 const allData = await fb.loadAllData();
                 APP.data = allData;
-                console.log('✅ Datos cargados desde Firebase');
-
                 showNotification('🔵 Conectado a Firebase', 'success');
             } catch (error) {
-                console.error('❌ Error con Firebase:', error);
+                console.error('Firebase error:', error);
                 APP.isOnline = false;
                 loadOfflineData();
                 showNotification('⚠️ Error conectando a Firebase. Modo offline.', 'warning');
             }
         } else {
-            console.log('⚫ Firebase NOT configured - OFFLINE MODE');
             APP.isOnline = false;
             loadOfflineData();
             showNotification('⚠️ Firebase no configurado. Modo offline.', 'warning');
@@ -109,6 +109,8 @@ async function initApp() {
 
     setupEventListeners();
     setupMobileMenu();
+    setupSyncButton();
+    updateDatabaseModeStatus();
 
     // Hide spinner after loading
     if (spinner) {
@@ -327,6 +329,46 @@ function deleteDataFromSheet(sheetName, id) {
 }
 
 // ============ EVENT LISTENERS ============
+function setupSyncButton() {
+    const syncBtn = document.getElementById('sync-data-btn');
+    if (!syncBtn) return;
+
+    syncBtn.addEventListener('click', async () => {
+        if (!confirm('¿Sincronizar datos locales a Firebase?\n\nEsto enviará todos tus datos locales a la nube.')) {
+            return;
+        }
+
+        syncBtn.disabled = true;
+        syncBtn.textContent = '⏳ Sincronizando...';
+
+        try {
+            // Save current data to Firebase
+            const collections = ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals'];
+
+            for (const collectionName of collections) {
+                const items = APP.data[collectionName] || [];
+                for (const item of items) {
+                    if (item.id) {
+                        await window.firebaseDB.saveData(collectionName, item);
+                    }
+                }
+            }
+
+            showNotification('✅ Sincronización completada', 'success');
+            syncBtn.textContent = '🔄 Sincronizar';
+            syncBtn.style.display = 'none';
+            APP.isOnline = true;
+            updateDatabaseModeStatus();
+        } catch (error) {
+            console.error('Error en sincronización:', error);
+            showNotification('❌ Error en sincronización: ' + error.message, 'warning');
+            syncBtn.textContent = '🔄 Sincronizar';
+        } finally {
+            syncBtn.disabled = false;
+        }
+    });
+}
+
 function setupEventListeners() {
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -777,9 +819,8 @@ window.deleteDebt = async function(debtId) {
     if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('debts', debtId);
-            console.log('✅ Deuda eliminada de Firebase:', debtId);
         } catch (err) {
-            console.error('❌ Error eliminando deuda:', err);
+            console.error('Error deleting debt:', err);
             APP.data.debts.push(debt);
             updateDashboard();
             renderDebtsList();
@@ -787,7 +828,6 @@ window.deleteDebt = async function(debtId) {
         }
     } else {
         saveOfflineData();
-        console.log('💾 Deuda eliminada (offline)');
     }
 }
 
@@ -808,9 +848,8 @@ window.deleteTransaction = async function(transId) {
     if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('transactions', transId);
-            console.log('✅ Transacción eliminada de Firebase:', transId);
         } catch (err) {
-            console.error('❌ Error eliminando transacción:', err);
+            console.error('Error deleting transaction:', err);
             APP.data.transactions.push(transaction);
             updateDashboard();
             renderExpensesList();
@@ -820,7 +859,6 @@ window.deleteTransaction = async function(transId) {
         }
     } else {
         saveOfflineData();
-        console.log('💾 Transacción eliminada (offline)');
     }
 }
 
@@ -962,18 +1000,15 @@ window.deleteAccount = async function(accountId) {
     if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('accounts', accountId);
-            console.log('✅ Cuenta eliminada de Firebase:', accountId);
         } catch (err) {
-            console.error('❌ Error eliminando de Firebase:', err);
+            console.error('Error deleting account:', err);
             APP.data.accounts.push(account);
             renderAccountsList();
             renderAccounts();
             alert('⚠️ Error al eliminar: ' + err.message);
         }
     } else {
-        // Modo offline: guardar en localStorage
         saveOfflineData();
-        console.log('💾 Cuenta eliminada (offline)');
     }
 }
 
@@ -1045,9 +1080,8 @@ window.deleteCategory = async function(categoryId) {
     if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('categories', categoryId);
-            console.log('✅ Categoría eliminada de Firebase:', categoryId);
         } catch (err) {
-            console.error('❌ Error eliminando de Firebase:', err);
+            console.error('Error deleting category:', err);
             APP.data.categories.push(category);
             renderCategoriesList();
             renderCategories();
@@ -1055,7 +1089,6 @@ window.deleteCategory = async function(categoryId) {
         }
     } else {
         saveOfflineData();
-        console.log('💾 Categoría eliminada (offline)');
     }
 }
 
@@ -1117,9 +1150,8 @@ window.deleteGoal = async function(goalId) {
     if (APP.isOnline && window.firebaseDB) {
         try {
             await window.firebaseDB.deleteData('goals', goalId);
-            console.log('✅ Meta eliminada de Firebase:', goalId);
         } catch (err) {
-            console.error('❌ Error eliminando meta:', err);
+            console.error('Error deleting goal:', err);
             APP.data.goals.push(goal);
             renderGoalsList();
             updateDashboard();
@@ -1127,7 +1159,6 @@ window.deleteGoal = async function(goalId) {
         }
     } else {
         saveOfflineData();
-        console.log('💾 Meta eliminada (offline)');
     }
 }
 

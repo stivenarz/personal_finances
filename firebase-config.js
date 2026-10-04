@@ -49,7 +49,6 @@ export function setFirebaseConfig(config) {
   };
 
   localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
-  console.log('✅ Configuración Firebase guardada');
 }
 
 // Firebase instances - lazy initialized only if configured
@@ -58,15 +57,12 @@ let db = null;
 let auth = null;
 let currentUser = null;
 
-// Initialize Firebase only if configured
 export function initializeFirebase() {
   if (!isFirebaseConfigured()) {
-    console.warn('⚠️ Firebase not configured - running in OFFLINE mode');
     return false;
   }
 
   if (app) {
-    console.log('Firebase already initialized');
     return true;
   }
 
@@ -75,10 +71,9 @@ export function initializeFirebase() {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    console.log('✅ Firebase initialized with user configuration');
     return true;
   } catch (error) {
-    console.error('❌ Error initializing Firebase:', error);
+    console.error('Error initializing Firebase:', error);
     return false;
   }
 }
@@ -88,24 +83,20 @@ export function getFirebaseInstance() {
   return { app, db, auth };
 }
 
-// ============ AUTH ============
 export async function initializeAuth() {
   return new Promise((resolve, reject) => {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         currentUser = user;
-        console.log('Autenticado como:', user.uid);
         resolve(user);
       } else {
-        // Sign in anonymously
         signInAnonymously(auth)
           .then((result) => {
             currentUser = result.user;
-            console.log('Sesión anónima creada:', currentUser.uid);
             resolve(currentUser);
           })
           .catch((error) => {
-            console.error('Error en autenticación:', error);
+            console.error('Authentication error:', error);
             reject(error);
           });
       }
@@ -143,7 +134,7 @@ export async function loadData(collectionName) {
     });
     return data;
   } catch (error) {
-    console.error('Error cargando datos:', error);
+    console.error(`Error loading ${collectionName}:`, error);
     return [];
   }
 }

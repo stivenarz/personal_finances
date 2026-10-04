@@ -354,9 +354,22 @@
                         <!-- Firebase Configuration -->
                         <div class="config-section">
                             <h3>🔥 Configuración Firebase</h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                                Usa tu propia instancia de Firebase o la compartida por defecto
-                            </p>
+
+                            <!-- Database Mode Toggle -->
+                            <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                                    <div>
+                                        <strong style="display: block; margin-bottom: 5px;">Base de Datos Activa</strong>
+                                        <span id="db-mode-status" style="color: var(--text-secondary); font-size: 14px;">Cargando...</span>
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" class="btn btn-secondary" id="sync-data-btn" style="display: none;">
+                                            🔄 Sincronizar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <form id="form-firebase" class="form-container">
                                 <div class="form-group">
                                     <label>API Key</label>
