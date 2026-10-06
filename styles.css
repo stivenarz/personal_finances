@@ -768,9 +768,15 @@ body {
     }
 
     .mobile-menu-toggle {
-        display: block;
-        order: -1;
-        margin-right: 10px;
+        display: flex;
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        margin-right: 0;
+        flex-shrink: 0;
     }
 
     .header-left {
@@ -840,14 +846,21 @@ body {
     }
 
     .top-header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: flex-start;
-        padding: 70px 15px 15px 15px;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 15px;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
     }
 
     .header-left h2 {
-        font-size: 20px;
+        font-size: 18px;
         margin: 0;
     }
 

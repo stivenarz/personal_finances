@@ -589,8 +589,6 @@ function setupEventListeners() {
     document.getElementById('trans-search').addEventListener('input', renderTransactionsList);
     document.getElementById('trans-filter-tipo').addEventListener('change', renderTransactionsList);
     document.getElementById('trans-filter-cuenta').addEventListener('change', renderTransactionsList);
-    document.getElementById('trans-filter-fecha-inicio').addEventListener('change', renderTransactionsList);
-    document.getElementById('trans-filter-fecha-fin').addEventListener('change', renderTransactionsList);
 
     // Export
     document.getElementById('export-btn').addEventListener('click', exportToExcel);
@@ -1421,10 +1419,10 @@ function renderTransactionsList() {
     const search = document.getElementById('trans-search').value.toLowerCase();
     const typeFilter = document.getElementById('trans-filter-tipo').value;
     const accountFilter = document.getElementById('trans-filter-cuenta').value;
-    const dateStart = document.getElementById('trans-filter-fecha-inicio').value;
-    const dateEnd = document.getElementById('trans-filter-fecha-fin').value;
 
     let transactions = [...APP.data.transactions];
+
+    transactions = transactions.filter(t => t.date.slice(0, 7) === APP.currentMonth);
 
     if (typeFilter) {
         transactions = transactions.filter(t => t.type === typeFilter);
@@ -1432,14 +1430,6 @@ function renderTransactionsList() {
 
     if (accountFilter) {
         transactions = transactions.filter(t => t.account === accountFilter);
-    }
-
-    if (dateStart) {
-        transactions = transactions.filter(t => t.date >= dateStart);
-    }
-
-    if (dateEnd) {
-        transactions = transactions.filter(t => t.date <= dateEnd);
     }
 
     if (search) {
