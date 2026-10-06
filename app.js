@@ -2006,12 +2006,6 @@ window.promptRetiroAhorros = function(goalId) {
         return;
     }
 
-    const savingAccount = APP.data.accounts.find(a => a.type === 'Ahorros');
-    if (!savingAccount || savingAccount.balance < goal.currentAmount) {
-        showNotification('❌ Saldo insuficiente en cuenta de ahorros', 'error');
-        return;
-    }
-
     const modal = document.createElement('div');
     modal.style.cssText = `
         position: fixed;
@@ -2027,7 +2021,6 @@ window.promptRetiroAhorros = function(goalId) {
     `;
 
     const availableAccounts = APP.data.accounts
-        .filter(a => a.type !== 'Ahorros')
         .map(acc => `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance || 0)})</option>`)
         .join('');
 
@@ -2045,7 +2038,7 @@ window.promptRetiroAhorros = function(goalId) {
         <h2 style="margin-top: 0; color: #333;">Retiro de Ahorros</h2>
         <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
             <strong>Meta:</strong> ${goal.description}<br>
-            <strong>Saldo disponible:</strong> $${formatNumber(savingAccount.balance)}
+            <strong>Saldo disponible:</strong> $${formatNumber(goal.currentAmount)}
         </p>
 
         <div style="margin-bottom: 15px;">
@@ -2058,7 +2051,7 @@ window.promptRetiroAhorros = function(goalId) {
 
         <div style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Monto</label>
-            <input type="number" id="retiroAmount" placeholder="Monto" min="0" step="0.01"
+            <input type="number" id="retiroAmount" placeholder="Monto" min="0" step="0.01" max="${goal.currentAmount}"
                 style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
         </div>
 
@@ -2083,8 +2076,8 @@ window.promptRetiroAhorros = function(goalId) {
             showNotification('❌ Ingresa un monto válido', 'error');
             return;
         }
-        if (savingAccount.balance < amount) {
-            showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(savingAccount.balance)}`, 'error');
+        if (goal.currentAmount < amount) {
+            showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(goal.currentAmount)}`, 'error');
             return;
         }
 
@@ -2094,7 +2087,6 @@ window.promptRetiroAhorros = function(goalId) {
             return;
         }
 
-        savingAccount.balance -= amount;
         cuentaDestino.balance += amount;
         goal.currentAmount -= amount;
 
@@ -2113,7 +2105,6 @@ window.promptRetiroAhorros = function(goalId) {
 
         if (APP.isOnline && window.firebaseDB) {
             Promise.all([
-                window.firebaseDB.saveData('accounts', savingAccount),
                 window.firebaseDB.saveData('accounts', cuentaDestino),
                 window.firebaseDB.saveData('goals', goal),
                 window.firebaseDB.saveData('transactions', transaction)
@@ -2281,12 +2272,6 @@ window.deleteSavingsGoal = async function(goalId) {
     if (!goal) return;
 
     if (goal.currentAmount > 0) {
-        const savingAccount = APP.data.accounts.find(a => a.type === 'Ahorros');
-        if (!savingAccount) {
-            showNotification('❌ No hay cuenta de ahorros disponible', 'error');
-            return;
-        }
-
         const modal = document.createElement('div');
         modal.style.cssText = `
             position: fixed;
@@ -2302,8 +2287,7 @@ window.deleteSavingsGoal = async function(goalId) {
         `;
 
         const availableAccounts = APP.data.accounts
-            .filter(a => a.type !== 'Ahorros')
-            .map(acc => `<option value="${acc.id}">${acc.name}</option>`)
+            .map(acc => `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance || 0)})</option>`)
             .join('');
 
         const content = document.createElement('div');
@@ -2354,7 +2338,6 @@ window.deleteSavingsGoal = async function(goalId) {
             }
 
             cuentaDestino.balance += goal.currentAmount;
-            savingAccount.balance -= goal.currentAmount;
 
             APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
 
@@ -2362,8 +2345,7 @@ window.deleteSavingsGoal = async function(goalId) {
                 try {
                     await Promise.all([
                         window.firebaseDB.deleteData('goals', goalId),
-                        window.firebaseDB.saveData('accounts', cuentaDestino),
-                        window.firebaseDB.saveData('accounts', savingAccount)
+                        window.firebaseDB.saveData('accounts', cuentaDestino)
                     ]);
                 } catch (err) {
                     console.error('Error deleting goal:', err);
