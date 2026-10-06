@@ -566,12 +566,6 @@ function setupEventListeners() {
     const formMetaAhorro = document.getElementById('form-meta-ahorro');
     if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
 
-    const formAbonoAhorro = document.getElementById('form-abono-ahorro');
-    if (formAbonoAhorro) formAbonoAhorro.addEventListener('submit', handleAbonoAhorro);
-
-    const formRetiroAhorro = document.getElementById('form-retiro-ahorro');
-    if (formRetiroAhorro) formRetiroAhorro.addEventListener('submit', handleRetiroAhorro);
-
     // Gastos filters
     document.getElementById('gastos-search').addEventListener('input', renderExpensesList);
     document.getElementById('gastos-filter-categoria').addEventListener('change', renderExpensesList);
@@ -827,7 +821,7 @@ function renderExpensesList() {
     const search = document.getElementById('gastos-search').value.toLowerCase();
     const categoryFilter = document.getElementById('gastos-filter-categoria').value;
 
-    let expenses = APP.data.transactions.filter(t => t.type === 'Egreso');
+    let expenses = APP.data.transactions.filter(t => t.type === 'Egreso' && t.category !== 'Ahorros');
 
     if (categoryFilter) {
         expenses = expenses.filter(t => t.category === categoryFilter);
@@ -1705,7 +1699,7 @@ function handleAddSavingsGoal(e) {
         id: 'saving-' + Date.now(),
         description: document.getElementById('meta-ahorro-descripcion').value,
         targetAmount: getMoneyValue(document.getElementById("meta-ahorro-monto").value),
-        currentAmount: parseFloat(document.getElementById('meta-ahorro-actual').value) || 0,
+        currentAmount: 0,
         deadline: document.getElementById('meta-ahorro-fecha').value,
         createdAt: Date.now()
     };
@@ -1752,8 +1746,9 @@ function renderSavingsGoalsList() {
                         ${goal.deadline ? `<p style="margin: 8px 0; color: #999; font-size: 13px;">Plazo: ${daysLeft} días</p>` : ''}
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm" onclick="showSavingsAbono('${goal.id}')">+ Abonar</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteSavingsGoal('${goal.id}')">Eliminar</button>
+                        <button class="btn btn-primary btn-sm" onclick="promptAbonoAhorros('${goal.id}')">+ Abonar</button>
+                        <button class="btn btn-info btn-sm" onclick="promptRetiroAhorros('${goal.id}')">💰 Retiro</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSavingsGoal('${goal.id}')">🗑️ Eliminar</button>
                     </div>
                 </div>
                 <div style="width: 100%; background: #f0f0f0; border-radius: 4px; height: 8px; margin-top: 15px; overflow: hidden;">
@@ -1765,138 +1760,138 @@ function renderSavingsGoalsList() {
     }).join('');
 }
 
-function handleAbonoAhorro(e) {
-    e.preventDefault();
+window.promptAbonoAhorros = function(goalId) {
+    window.showSavingsAbono(goalId);
+};
 
-    const origenId = document.getElementById('abono-cuenta-origen').value;
-    const destinoId = document.getElementById('abono-cuenta-destino').value;
-    const amount = getMoneyValue(document.getElementById('abono-monto').value);
-    const descripcion = document.getElementById('abono-descripcion').value;
+window.promptRetiroAhorros = function(goalId) {
+    const goal = APP.data.goals.find(g => g.id === goalId);
+    if (!goal) return;
 
-    if (!origenId) {
-        showNotification('❌ Selecciona una cuenta origen', 'error');
-        return;
-    }
-    if (!destinoId) {
-        showNotification('❌ Selecciona una cuenta destino', 'error');
-        return;
-    }
-    if (amount <= 0) {
-        showNotification('❌ Ingresa un monto válido', 'error');
+    const savingAccount = APP.data.accounts.find(a => a.type === 'Ahorros');
+    if (!savingAccount || savingAccount.balance <= 0) {
+        showNotification('❌ No hay saldo en cuenta de ahorros', 'error');
         return;
     }
 
-    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
-    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
 
-    if (!cuentaOrigen || !cuentaDestino) {
-        showNotification('❌ Cuenta no encontrada', 'error');
-        return;
-    }
+    const availableAccounts = APP.data.accounts
+        .filter(a => a.type !== 'Ahorros')
+        .map(acc => `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance || 0)})</option>`)
+        .join('');
 
-    if (cuentaOrigen.balance < amount) {
-        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
-        return;
-    }
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    `;
 
-    cuentaOrigen.balance -= amount;
-    cuentaDestino.balance += amount;
+    content.innerHTML = `
+        <h2 style="margin-top: 0; color: #333;">Retiro de Ahorros</h2>
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+            <strong>Meta:</strong> ${goal.description}<br>
+            <strong>Saldo disponible:</strong> $${formatNumber(savingAccount.balance)}
+        </p>
 
-    const transaction = {
-        id: 'trans-' + Date.now(),
-        type: 'Egreso',
-        category: 'Ahorros',
-        description: `Abono a ahorros: ${descripcion || cuentaDestino.name}`,
-        amount: amount,
-        account: origenId,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: Date.now()
-    };
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Cuenta Destino</label>
+            <select id="retiroAccount" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <option value="">-- Selecciona una cuenta --</option>
+                ${availableAccounts}
+            </select>
+        </div>
 
-    APP.data.transactions.push(transaction);
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Monto</label>
+            <input type="number" id="retiroAmount" placeholder="Monto" min="0" step="0.01"
+                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+        </div>
 
-    if (APP.isOnline && window.firebaseDB) {
-        Promise.all([
-            window.firebaseDB.saveData('accounts', cuentaOrigen),
-            window.firebaseDB.saveData('accounts', cuentaDestino),
-            window.firebaseDB.saveData('transactions', transaction)
-        ]).catch(err => console.error('Error guardando en Firebase:', err));
-    } else {
-        saveOfflineData();
-    }
+        <div style="display: flex; gap: 10px;">
+            <button id="confirmRetiro" style="flex: 1; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Confirmar Retiro</button>
+            <button id="cancelRetiro" style="flex: 1; padding: 12px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+        </div>
+    `;
 
-    e.target.reset();
-    renderAccountsList();
-    renderAccounts();
-    updateDashboard();
-    showNotification('✅ Abono a ahorros realizado', 'success');
-}
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 
-function handleRetiroAhorro(e) {
-    e.preventDefault();
+    document.getElementById('confirmRetiro').addEventListener('click', () => {
+        const destinoId = document.getElementById('retiroAccount').value;
+        const amount = parseFloat(document.getElementById('retiroAmount').value);
 
-    const origenId = document.getElementById('retiro-cuenta-origen').value;
-    const destinoId = document.getElementById('retiro-cuenta-destino').value;
-    const amount = getMoneyValue(document.getElementById('retiro-monto').value);
-    const descripcion = document.getElementById('retiro-descripcion').value;
+        if (!destinoId) {
+            showNotification('❌ Selecciona una cuenta destino', 'error');
+            return;
+        }
+        if (amount <= 0 || isNaN(amount)) {
+            showNotification('❌ Ingresa un monto válido', 'error');
+            return;
+        }
+        if (savingAccount.balance < amount) {
+            showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(savingAccount.balance)}`, 'error');
+            return;
+        }
 
-    if (!origenId) {
-        showNotification('❌ Selecciona una cuenta origen', 'error');
-        return;
-    }
-    if (!destinoId) {
-        showNotification('❌ Selecciona una cuenta destino', 'error');
-        return;
-    }
-    if (amount <= 0) {
-        showNotification('❌ Ingresa un monto válido', 'error');
-        return;
-    }
+        const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+        if (!cuentaDestino) {
+            showNotification('❌ Cuenta no encontrada', 'error');
+            return;
+        }
 
-    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
-    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+        savingAccount.balance -= amount;
+        cuentaDestino.balance += amount;
 
-    if (!cuentaOrigen || !cuentaDestino) {
-        showNotification('❌ Cuenta no encontrada', 'error');
-        return;
-    }
+        const transaction = {
+            id: 'trans-' + Date.now(),
+            type: 'Ingreso',
+            category: 'Retiro de Ahorros',
+            description: `Retiro de ahorros: ${goal.description}`,
+            amount: amount,
+            account: destinoId,
+            date: new Date().toISOString().split('T')[0],
+            createdAt: Date.now()
+        };
 
-    if (cuentaOrigen.balance < amount) {
-        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
-        return;
-    }
+        APP.data.transactions.push(transaction);
 
-    cuentaOrigen.balance -= amount;
-    cuentaDestino.balance += amount;
+        if (APP.isOnline && window.firebaseDB) {
+            Promise.all([
+                window.firebaseDB.saveData('accounts', savingAccount),
+                window.firebaseDB.saveData('accounts', cuentaDestino),
+                window.firebaseDB.saveData('transactions', transaction)
+            ]).catch(err => console.error('Error guardando en Firebase:', err));
+        } else {
+            saveOfflineData();
+        }
 
-    const transaction = {
-        id: 'trans-' + Date.now(),
-        type: 'Ingreso',
-        category: 'Retiro de Ahorros',
-        description: `Retiro de ahorros: ${descripcion || cuentaOrigen.name}`,
-        amount: amount,
-        account: destinoId,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: Date.now()
-    };
+        modal.remove();
+        renderAccountsList();
+        renderAccounts();
+        updateDashboard();
+        showNotification('✅ Retiro de ahorros realizado', 'success');
+    });
 
-    APP.data.transactions.push(transaction);
-
-    if (APP.isOnline && window.firebaseDB) {
-        Promise.all([
-            window.firebaseDB.saveData('accounts', cuentaOrigen),
-            window.firebaseDB.saveData('accounts', cuentaDestino),
-            window.firebaseDB.saveData('transactions', transaction)
-        ]).catch(err => console.error('Error guardando en Firebase:', err));
-    } else {
-        saveOfflineData();
-    }
-
-    e.target.reset();
-    renderAccountsList();
-    renderAccounts();
-    updateDashboard();
-    showNotification('✅ Retiro de ahorros realizado', 'success');
+    document.getElementById('cancelRetiro').addEventListener('click', () => {
+        modal.remove();
+    });
 }
 
 window.showSavingsAbono = function(goalId) {
@@ -2043,6 +2038,114 @@ window.showSavingsAbono = function(goalId) {
 window.deleteSavingsGoal = async function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
     if (!goal) return;
+
+    if (goal.currentAmount > 0) {
+        const savingAccount = APP.data.accounts.find(a => a.type === 'Ahorros');
+        if (!savingAccount) {
+            showNotification('❌ No hay cuenta de ahorros disponible', 'error');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+
+        const availableAccounts = APP.data.accounts
+            .filter(a => a.type !== 'Ahorros')
+            .map(acc => `<option value="${acc.id}">${acc.name}</option>`)
+            .join('');
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        `;
+
+        content.innerHTML = `
+            <h2 style="margin-top: 0; color: #d32f2f;">⚠️ Meta con Saldo</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                La meta <strong>"${goal.description}"</strong> tiene un saldo de <strong>$${formatNumber(goal.currentAmount)}</strong>.<br><br>
+                Para eliminarla, debes transferir este saldo a una cuenta disponible.
+            </p>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Transferir a:</label>
+                <select id="transferDestino" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <option value="">-- Selecciona una cuenta --</option>
+                    ${availableAccounts}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="confirmDelete" style="flex: 1; padding: 12px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Transferir y Eliminar</button>
+                <button id="cancelDelete" style="flex: 1; padding: 12px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+            </div>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+            const destinoId = document.getElementById('transferDestino').value;
+            if (!destinoId) {
+                showNotification('❌ Selecciona una cuenta destino', 'error');
+                return;
+            }
+
+            const cuentaDestino = APP.data.accounts.find(a => a.id === destinoId);
+            if (!cuentaDestino) {
+                showNotification('❌ Cuenta no encontrada', 'error');
+                return;
+            }
+
+            cuentaDestino.balance += goal.currentAmount;
+            savingAccount.balance -= goal.currentAmount;
+
+            APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
+
+            if (APP.isOnline && window.firebaseDB) {
+                try {
+                    await Promise.all([
+                        window.firebaseDB.deleteData('goals', goalId),
+                        window.firebaseDB.saveData('accounts', cuentaDestino),
+                        window.firebaseDB.saveData('accounts', savingAccount)
+                    ]);
+                } catch (err) {
+                    console.error('Error deleting goal:', err);
+                    APP.data.goals.push(goal);
+                    showNotification('⚠️ Error al eliminar', 'warning');
+                }
+            } else {
+                saveOfflineData();
+            }
+
+            modal.remove();
+            renderSavingsGoalsList();
+            renderAccountsList();
+            updateSavingsKpis();
+            updateDashboard();
+            showNotification(`✅ Meta eliminada. Saldo transferido a ${cuentaDestino.name}`, 'success');
+        });
+
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            modal.remove();
+        });
+        return;
+    }
 
     const confirmed = confirm(`¿Eliminar la meta "${goal.description}"?`);
     if (!confirmed) return;
