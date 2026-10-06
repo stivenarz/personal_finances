@@ -2226,10 +2226,10 @@ window.showSavingsAbono = function(goalId) {
         // Update savings goal
         goal.currentAmount += amount;
 
-        // Create egreso transaction
+        // Create ahorro transaction (not an egreso)
         const transaction = {
             id: 'trans-' + Date.now(),
-            type: 'Egreso',
+            type: 'Ahorro',
             date: new Date().toISOString().split('T')[0],
             category: 'Ahorros',
             description: `Abono a meta: ${goal.description}`,
