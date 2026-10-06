@@ -565,8 +565,6 @@ function setupEventListeners() {
     document.getElementById('form-categoria').addEventListener('submit', handleAddCategory);
     const formMetaAhorro = document.getElementById('form-meta-ahorro');
     if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
-    const formTransferencia = document.getElementById('form-transferencia');
-    if (formTransferencia) formTransferencia.addEventListener('submit', handleTransferencia);
 
     // Gastos filters
     document.getElementById('gastos-search').addEventListener('input', renderExpensesList);
@@ -1554,82 +1552,148 @@ function renderAccountsList() {
                 <div class="account-type">${acc.type}</div>
             </div>
             <div class="account-balance">$${formatNumber(balance)}</div>
-            <button class="btn btn-danger" onclick="deleteAccount('${acc.id}')">Eliminar</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary btn-sm" onclick="showTransferModal('${acc.id}')">💸 Transferir</button>
+                <button class="btn btn-danger" onclick="deleteAccount('${acc.id}')">🗑️ Eliminar</button>
+            </div>
         </div>
     `;
     }).join('');
 }
 
-function handleTransferencia(e) {
-    e.preventDefault();
+window.showTransferModal = function(origenId) {
+    const cuentaOrigen = APP.data.accounts.find(a => a.id === origenId);
+    if (!cuentaOrigen) return;
 
-    const origenId = document.getElementById('transferencia-origen').value;
-    const destinoId = document.getElementById('transferencia-destino').value;
-    const amount = getMoneyValue(document.getElementById('transferencia-monto').value);
-    const descripcion = document.getElementById('transferencia-descripcion').value;
-
-    if (!origenId) {
-        showNotification('❌ Selecciona una cuenta origen', 'error');
-        return;
-    }
-    if (!destinoId) {
-        showNotification('❌ Selecciona una cuenta destino', 'error');
-        return;
-    }
-    if (origenId === destinoId) {
-        showNotification('❌ Las cuentas origen y destino no pueden ser iguales', 'error');
-        return;
-    }
-    if (amount <= 0) {
-        showNotification('❌ Ingresa un monto válido', 'error');
+    const otherAccounts = APP.data.accounts.filter(a => a.id !== origenId);
+    if (otherAccounts.length === 0) {
+        showNotification('❌ No hay otra cuenta para transferir', 'error');
         return;
     }
 
-    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
-    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+    const destinoOptions = otherAccounts
+        .map(acc => `<option value="${acc.id}">${acc.name} ($${formatNumber(acc.balance || 0)})</option>`)
+        .join('');
 
-    if (!cuentaOrigen || !cuentaDestino) {
-        showNotification('❌ Cuenta no encontrada', 'error');
-        return;
-    }
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
 
-    if (cuentaOrigen.balance < amount) {
-        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
-        return;
-    }
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    `;
 
-    cuentaOrigen.balance -= amount;
-    cuentaDestino.balance += amount;
+    content.innerHTML = `
+        <h2 style="margin-top: 0; color: #333;">Transferencia de Dinero</h2>
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+            <strong>Desde:</strong> ${cuentaOrigen.name}<br>
+            <strong>Saldo disponible:</strong> $${formatNumber(cuentaOrigen.balance || 0)}
+        </p>
 
-    const transaction = {
-        id: 'trans-' + Date.now(),
-        type: 'Transferencia',
-        category: 'Transferencia',
-        description: `Transferencia de ${cuentaOrigen.name} a ${cuentaDestino.name}: ${descripcion || ''}`,
-        amount: amount,
-        account: origenId,
-        date: new Date().toISOString().split('T')[0],
-        createdAt: Date.now()
-    };
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Cuenta Destino</label>
+            <select id="modalDestino" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <option value="">-- Selecciona una cuenta --</option>
+                ${destinoOptions}
+            </select>
+        </div>
 
-    APP.data.transactions.push(transaction);
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Monto</label>
+            <input type="text" id="modalMonto" inputmode="decimal" placeholder="0" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+        </div>
 
-    if (APP.isOnline && window.firebaseDB) {
-        Promise.all([
-            window.firebaseDB.saveData('accounts', cuentaOrigen),
-            window.firebaseDB.saveData('accounts', cuentaDestino),
-            window.firebaseDB.saveData('transactions', transaction)
-        ]).catch(err => console.error('Error guardando en Firebase:', err));
-    } else {
-        saveOfflineData();
-    }
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Descripción (opcional)</label>
+            <input type="text" id="modalDescripcion" placeholder="Nota..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        </div>
 
-    e.target.reset();
-    renderAccountsList();
-    renderAccounts();
-    updateDashboard();
-    showNotification(`✅ Transferencia de $${formatNumber(amount)} realizada de ${cuentaOrigen.name} a ${cuentaDestino.name}`, 'success');
-}
+        <div style="display: flex; gap: 10px;">
+            <button id="confirmTransfer" style="flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Transferir</button>
+            <button id="cancelTransfer" style="flex: 1; padding: 12px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    document.getElementById('confirmTransfer').addEventListener('click', () => {
+        const destinoId = document.getElementById('modalDestino').value;
+        const amount = getMoneyValue(document.getElementById('modalMonto').value);
+        const descripcion = document.getElementById('modalDescripcion').value;
+
+        if (!destinoId) {
+            showNotification('❌ Selecciona una cuenta destino', 'error');
+            return;
+        }
+        if (amount <= 0) {
+            showNotification('❌ Ingresa un monto válido', 'error');
+            return;
+        }
+        if (cuentaOrigen.balance < amount) {
+            showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
+            return;
+        }
+
+        const cuentaDestino = APP.data.accounts.find(a => a.id === destinoId);
+        if (!cuentaDestino) {
+            showNotification('❌ Cuenta destino no encontrada', 'error');
+            return;
+        }
+
+        cuentaOrigen.balance -= amount;
+        cuentaDestino.balance += amount;
+
+        const transaction = {
+            id: 'trans-' + Date.now(),
+            type: 'Transferencia',
+            category: 'Transferencia',
+            description: `Transferencia de ${cuentaOrigen.name} a ${cuentaDestino.name}${descripcion ? ': ' + descripcion : ''}`,
+            amount: amount,
+            account: origenId,
+            date: new Date().toISOString().split('T')[0],
+            createdAt: Date.now()
+        };
+
+        APP.data.transactions.push(transaction);
+
+        if (APP.isOnline && window.firebaseDB) {
+            Promise.all([
+                window.firebaseDB.saveData('accounts', cuentaOrigen),
+                window.firebaseDB.saveData('accounts', cuentaDestino),
+                window.firebaseDB.saveData('transactions', transaction)
+            ]).catch(err => console.error('Error guardando en Firebase:', err));
+        } else {
+            saveOfflineData();
+        }
+
+        modal.remove();
+        renderAccountsList();
+        renderAccounts();
+        updateDashboard();
+        showNotification(`✅ Transferencia de $${formatNumber(amount)} realizada`, 'success');
+    });
+
+    document.getElementById('cancelTransfer').addEventListener('click', () => {
+        modal.remove();
+    });
+};
 
 window.deleteAccount = async function(accountId) {
     const account = APP.data.accounts.find(a => a.id === accountId);
