@@ -278,7 +278,6 @@ async function saveDataToFirebase(collectionName, data) {
     if (!APP.isOnline) {
         // Modo offline: guardar en localStorage
         saveOfflineData();
-        console.log('💾 Guardado en localStorage (offline)');
         return;
     }
 
@@ -294,7 +293,6 @@ async function saveDataToFirebase(collectionName, data) {
         } else {
             await window.firebaseDB.saveData(collectionName, data);
         }
-        console.log('✅ Guardado en Firebase');
     } catch (error) {
         console.error('Error guardando en Firebase:', error);
         saveOfflineData();
@@ -483,7 +481,6 @@ function setupSyncButton() {
                     try {
                         await window.firebaseDB.deleteData(collectionName, id);
                     } catch (err) {
-                        console.log(`Record not found in Firebase: ${collectionName}/${id}`);
                     }
                 }
             }
@@ -681,19 +678,15 @@ function fixTransactionCategories() {
             if (trans.description.startsWith('Pago de deuda:')) {
                 trans.category = 'Deuda';
                 updated = true;
-                console.log(`[Category Fix] Set to 'Deuda' for: ${trans.description}`);
             } else if (trans.description.startsWith('Abono a meta:')) {
                 trans.category = 'Ahorros';
                 updated = true;
-                console.log(`[Category Fix] Set to 'Ahorros' for: ${trans.description}`);
             } else if (trans.description.startsWith('Traslado:')) {
                 trans.category = 'Traslado';
                 updated = true;
-                console.log(`[Category Fix] Set to 'Traslado' for: ${trans.description}`);
             }
         }
     });
-    console.log(`[Category Fix] Transactions fixed: ${updated}`);
 
     // Sync updated data to Firebase if online
     if (updated && APP.isOnline && window.firebaseDB) {
@@ -1483,10 +1476,8 @@ function renderAccounts() {
 
 function renderAccountsList() {
     const container = document.getElementById('list-cuentas');
-    console.log('renderAccountsList - accounts:', JSON.stringify(APP.data.accounts, null, 2));
     container.innerHTML = APP.data.accounts.map(acc => {
         const balance = acc.balance || 0;
-        console.log(`Account ${acc.name} balance: ${balance}`);
         return `
         <div class="account-item">
             <div>
@@ -1506,7 +1497,6 @@ window.deleteAccount = async function(accountId) {
 
     const confirmed = confirm(`¿Eliminar la cuenta "${account.name}"?`);
     if (!confirmed) {
-        console.log('Eliminación cancelada');
         return;
     }
 
@@ -1586,7 +1576,6 @@ window.deleteCategory = async function(categoryId) {
 
     const confirmed = confirm(`¿Eliminar la categoría "${category.name}"?`);
     if (!confirmed) {
-        console.log('Eliminación cancelada');
         return;
     }
 
@@ -2125,45 +2114,143 @@ function updateIncomeExpensesChart(transactions) {
 }
 
 // ============ DELETE ALL DATA ============
-async function handleDeleteAllData() {
-    // First confirmation
-    const firstConfirm = confirm(
-        '⚠️ ADVERTENCIA\n\n' +
-        'Estás a punto de eliminar TODOS los datos de la aplicación:\n' +
-        '• Todas las transacciones\n' +
-        '• Todas las cuentas\n' +
-        '• Todas las categorías\n' +
-        '• Datos locales\n' +
-        '• Datos en Firebase (si está conectado)\n\n' +
-        '¿Estás seguro de que deseas continuar?'
-    );
+function showDeleteConfirmationModal() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
 
-    if (!firstConfirm) return;
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 500px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        border: 2px solid var(--danger);
+    `;
 
-    // Second confirmation with specific text
-    const userInput = prompt(
-        '⚠️ SEGUNDA CONFIRMACIÓN\n\n' +
-        'Escribe "BORRAR TODO" para confirmar el borrado irreversible de todos los datos:'
-    );
+    content.innerHTML = `
+        <h2 style="color: var(--danger); margin-top: 0; margin-bottom: 20px;">⚠️ Confirmación de Borrado</h2>
+        <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px;">
+            Esta acción eliminará <strong>TODOS</strong> los datos de la aplicación:
+        </p>
+        <ul style="color: var(--text-secondary); margin-bottom: 20px; padding-left: 20px;">
+            <li>Todas las transacciones</li>
+            <li>Todas las cuentas</li>
+            <li>Todas las categorías</li>
+            <li>Datos guardados localmente</li>
+            <li>Datos en Firebase (si está conectado)</li>
+        </ul>
+        <p style="color: var(--danger); font-weight: bold; margin-bottom: 20px;">
+            ⚠️ Esta acción es irreversible
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="cancel-delete-btn" class="btn btn-secondary" style="cursor: pointer;">Cancelar</button>
+            <button id="confirm-delete-btn" class="btn btn-danger" style="cursor: pointer;">Entendido, continuar</button>
+        </div>
+    `;
 
-    if (userInput !== 'BORRAR TODO') {
-        showNotification('❌ Operación cancelada', 'warning');
-        return;
-    }
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 
+    document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+        modal.remove();
+        showNotification('Operación cancelada', 'info');
+    });
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+        modal.remove();
+        showDeleteCodeConfirmation();
+    });
+}
+
+function showDeleteCodeConfirmation() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 500px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        border: 2px solid var(--danger);
+    `;
+
+    content.innerHTML = `
+        <h2 style="color: var(--danger); margin-top: 0; margin-bottom: 20px;">🔐 Confirmación de Seguridad</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">
+            Para confirmar el borrado irreversible de todos tus datos, escribe:
+        </p>
+        <p style="background: var(--bg-secondary); padding: 10px; border-radius: 6px; font-family: monospace; font-weight: bold; color: var(--danger); text-align: center; margin-bottom: 20px;">
+            BORRAR TODO
+        </p>
+        <input type="text" id="delete-code-input" placeholder="Escribe el código aquí..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; margin-bottom: 20px; background: var(--bg-secondary); color: var(--text-primary);">
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="cancel-code-btn" class="btn btn-secondary" style="cursor: pointer;">Cancelar</button>
+            <button id="confirm-code-btn" class="btn btn-danger" style="cursor: pointer;" disabled>Borrar Todo</button>
+        </div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('delete-code-input');
+    const confirmBtn = document.getElementById('confirm-code-btn');
+
+    input.addEventListener('input', () => {
+        confirmBtn.disabled = input.value !== 'BORRAR TODO';
+    });
+
+    input.focus();
+
+    document.getElementById('cancel-code-btn').addEventListener('click', () => {
+        modal.remove();
+        showNotification('Operación cancelada', 'info');
+    });
+
+    document.getElementById('confirm-code-btn').addEventListener('click', () => {
+        modal.remove();
+        performDeleteAllData();
+    });
+}
+
+async function performDeleteAllData() {
     try {
+        showNotification('🔄 Eliminando datos... Por favor espera', 'info');
+
         // Preserve Firebase config
         const firebaseConfig = localStorage.getItem('firebaseConfig');
 
-        // Delete local data (but preserve firebaseConfig)
+        // Delete local data
         localStorage.clear();
 
         // Restore Firebase config
         if (firebaseConfig) {
             localStorage.setItem('firebaseConfig', firebaseConfig);
         }
-
-        console.log('Cache local eliminado (configuración de Firebase preservada)');
 
         // Delete Firebase data
         if (APP.isOnline && window.firebaseDB) {
@@ -2179,18 +2266,17 @@ async function handleDeleteAllData() {
                         for (const doc of docs) {
                             await window.firebaseDB.deleteData(collectionName, doc.id);
                         }
-                        console.log(`Colección ${collectionName} eliminada`);
                     } catch (err) {
                         console.error(`Error eliminando ${collectionName}:`, err);
                     }
                 }
 
-                showNotification('✅ Todos los datos han sido eliminados', 'success');
+                showNotification('✅ Todos los datos han sido eliminados. Recargando...', 'success');
             } else {
-                showNotification('⚠️ Datos locales eliminados (Firebase no conectado)', 'warning');
+                showNotification('✅ Datos eliminados. Recargando...', 'success');
             }
         } else {
-            showNotification('✅ Datos locales eliminados', 'success');
+            showNotification('✅ Datos locales eliminados. Recargando...', 'success');
         }
 
         // Reset app data
@@ -2209,8 +2295,13 @@ async function handleDeleteAllData() {
         }, 1500);
     } catch (error) {
         console.error('Error al borrar datos:', error);
-        showNotification('❌ Error al borrar los datos: ' + error.message, 'error');
+        showNotification('❌ Error: ' + error.message, 'error');
     }
+}
+
+async function handleDeleteAllData() {
+    // Deprecated: Use showDeleteConfirmationModal() instead
+    showDeleteConfirmationModal();
 }
 
 // ============ EXPORT TO EXCEL ============
