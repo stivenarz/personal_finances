@@ -757,28 +757,28 @@ function handleAddExpense(e) {
     const categoryId = document.getElementById('gasto-categoria').value;
 
     if (!categoryId) {
-        alert('❌ Selecciona una categoría');
+        showNotification('❌ Selecciona una categoría', 'error');
         return;
     }
 
     if (!accountId) {
-        alert('❌ Selecciona una cuenta');
+        showNotification('❌ Selecciona una cuenta', 'error');
         return;
     }
 
     if (!amount || amount <= 0) {
-        alert('❌ Ingresa un monto válido');
+        showNotification('❌ Ingresa un monto válido', 'error');
         return;
     }
 
     const account = APP.data.accounts.find(a => a.id === accountId);
     if (!account) {
-        alert('❌ Cuenta no encontrada');
+        showNotification('❌ Cuenta no encontrada', 'error');
         return;
     }
 
     if (account.balance < amount) {
-        alert(`❌ Saldo insuficiente. Disponible: $${formatNumber(account.balance)}, Requerido: $${formatNumber(amount)}`);
+        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(account.balance)}, Requerido: $${formatNumber(amount)}`, 'error');
         return;
     }
 
@@ -814,7 +814,7 @@ function handleAddExpense(e) {
     renderAccounts();
     renderExpensesList();
     renderAccountsList();
-    alert('✅ Gasto registrado correctamente');
+    showNotification('Gasto registrado correctamente', 'success');
 }
 
 function renderExpensesList() {
@@ -885,18 +885,18 @@ function handleAddIncome(e) {
     const amount = getMoneyValue(document.getElementById("ingreso-monto").value);
 
     if (!accountId) {
-        alert('❌ Selecciona una cuenta');
+        showNotification('❌ Selecciona una cuenta', 'error');
         return;
     }
 
     if (!amount || amount <= 0) {
-        alert('❌ Ingresa un monto válido');
+        showNotification('❌ Ingresa un monto válido', 'error');
         return;
     }
 
     const account = APP.data.accounts.find(a => a.id === accountId);
     if (!account) {
-        alert('❌ Cuenta no encontrada');
+        showNotification('❌ Cuenta no encontrada', 'error');
         return;
     }
 
@@ -932,7 +932,7 @@ function handleAddIncome(e) {
     renderAccounts();
     renderIncomeList();
     renderAccountsList();
-    alert('✅ Ingreso registrado correctamente');
+    showNotification('Ingreso registrado correctamente', 'success');
 }
 
 function renderIncomeList() {
@@ -1059,7 +1059,7 @@ function handleAddDebt(e) {
     e.target.reset();
     updateDashboard();
     renderDebtsList();
-    alert('✅ Deuda registrada correctamente');
+    showNotification('Deuda registrada correctamente', 'success');
 }
 
 function renderDebtsList() {
@@ -1196,28 +1196,28 @@ window.showPaymentModal = function(debtId) {
         modal.remove();
 
         if (!accountId) {
-            alert('❌ Selecciona una cuenta');
+            showNotification('❌ Selecciona una cuenta', 'error');
             return;
         }
 
         if (!amount || isNaN(amount) || amount <= 0) {
-            alert('❌ Ingrese un monto válido');
+            showNotification('❌ Ingrese un monto válido', 'error');
             return;
         }
 
         if (amount > debt.currentBalance) {
-            alert('❌ El monto no puede exceder el saldo actual');
+            showNotification('❌ El monto no puede exceder el saldo actual', 'error');
             return;
         }
 
         const account = APP.data.accounts.find(a => a.id === accountId);
         if (!account) {
-            alert('❌ Cuenta no encontrada');
+            showNotification('❌ Cuenta no encontrada', 'error');
             return;
         }
 
         if (account.balance < amount) {
-            alert('❌ Saldo insuficiente en la cuenta');
+            showNotification('❌ Saldo insuficiente en la cuenta', 'error');
             return;
         }
 
@@ -1336,7 +1336,7 @@ window.deleteDebt = async function(debtId) {
             APP.data.debts.push(debt);
             updateDashboard();
             renderDebtsList();
-            alert('⚠️ Error al eliminar: ' + err.message);
+            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
         }
     } else {
         saveOfflineData();
@@ -1369,7 +1369,7 @@ window.deleteTransaction = async function(transId) {
             renderExpensesList();
             renderIncomeList();
             renderTransactionsList();
-            alert('⚠️ Error al eliminar: ' + err.message);
+            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
         }
     } else {
         saveOfflineData();
@@ -1467,7 +1467,7 @@ function handleAddAccount(e) {
     e.target.reset();
     renderAccounts();
     renderAccountsList();
-    alert('✅ Cuenta agregada');
+    showNotification('Cuenta agregada', 'success');
 }
 
 function renderAccounts() {
@@ -1522,7 +1522,7 @@ window.deleteAccount = async function(accountId) {
             APP.data.accounts.push(account);
             renderAccountsList();
             renderAccounts();
-            alert('⚠️ Error al eliminar: ' + err.message);
+            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
         }
     } else {
         saveOfflineData();
@@ -1552,7 +1552,7 @@ function handleAddCategory(e) {
     e.target.reset();
     renderCategories();
     renderCategoriesList();
-    alert('✅ Categoría agregada');
+    showNotification('Categoría agregada', 'success');
 }
 
 function renderCategories() {
@@ -1601,7 +1601,7 @@ window.deleteCategory = async function(categoryId) {
             APP.data.categories.push(category);
             renderCategoriesList();
             renderCategories();
-            alert('⚠️ Error al eliminar: ' + err.message);
+            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
         }
     } else {
         saveOfflineData();
@@ -1627,7 +1627,7 @@ window.deleteGoal = async function(goalId) {
             APP.data.goals.push(goal);
             renderSavingsGoalsList();
             updateDashboard();
-            alert('⚠️ Error al eliminar: ' + err.message);
+            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
         }
     } else {
         saveOfflineData();
@@ -1775,18 +1775,18 @@ window.showSavingsAbono = function(goalId) {
         const amount = parseFloat(amountInput.value);
 
         if (!accountId) {
-            alert('❌ Selecciona una cuenta');
+            showNotification('❌ Selecciona una cuenta', 'error');
             return;
         }
 
         if (!amount || isNaN(amount) || amount <= 0) {
-            alert('❌ Ingresa un monto válido');
+            showNotification('❌ Ingresa un monto válido', 'error');
             return;
         }
 
         const account = APP.data.accounts.find(a => a.id === accountId);
         if (!account || account.balance < amount) {
-            alert('❌ Saldo insuficiente en la cuenta');
+            showNotification('❌ Saldo insuficiente en la cuenta', 'error');
             return;
         }
 
@@ -2399,7 +2399,7 @@ function exportToExcel() {
     link.setAttribute('download', `finanzas-${APP.currentMonth}.csv`);
     link.click();
 
-    alert('✅ Reporte exportado correctamente');
+    showNotification('Reporte exportado correctamente', 'success');
 }
 
 // ============ UTILITIES ============

@@ -39,7 +39,11 @@
       "Bash(sed -i '' 's/type=\"number\" id=\"ingreso-monto\"/type=\"text\" id=\"ingreso-monto\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
       "Bash(sed -i '' 's/type=\"number\" id=\"deuda-inicial\"/type=\"text\" id=\"deuda-inicial\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
       "Bash(sed -i '' 's/type=\"number\" id=\"deuda-saldo\"/type=\"text\" id=\"deuda-saldo\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
-      "Bash(sed -i '' 's/type=\"number\" id=\"deuda-cuota\"/type=\"text\" id=\"deuda-cuota\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)"
+      "Bash(sed -i '' 's/type=\"number\" id=\"deuda-cuota\"/type=\"text\" id=\"deuda-cuota\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
+      "Bash(sed -i \"s/alert\\('✅ /showNotification\\('✅ ', 'success'\\)/g\" app.js)",
+      "Bash(sed -i \"s/alert\\('❌ /showNotification\\('❌ ', 'error'\\)/g\" app.js)",
+      "Bash(sed -i \"s/alert\\(\\\\`❌ /showNotification\\(\\\\`❌ /, 'error'\\)/g\" app.js)",
+      "Bash(sed -i \"s/alert\\('⚠️ /showNotification\\('⚠️ ', 'warning'\\)/g\" app.js)"
     ]
   }
 }
