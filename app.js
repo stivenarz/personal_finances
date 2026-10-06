@@ -2445,9 +2445,8 @@ function updateDashboard() {
         .reduce((sum, t) => sum + t.amount, 0);
 
     const balance = totalIncome - totalExpenses;
-    const savingRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
-    // Calculate account balances (separate available from savings)
+    // Calculate account balances (separate available from savings) - placed before savingRate
     const availableBalance = APP.data.accounts
         .filter(acc => acc.type !== 'Ahorros')
         .reduce((sum, acc) => sum + (acc.balance || 0), 0);
@@ -2458,6 +2457,9 @@ function updateDashboard() {
 
     // Calculate total savings goals
     const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+
+    // Saving rate is the percentage of income that went to savings (not the balance)
+    const savingRate = totalIncome > 0 ? ((savingsBalance + totalSavings) / totalIncome) * 100 : 0;
 
     // Update KPIs
     document.getElementById('kpi-ingresos').textContent = `$${formatNumber(totalIncome)}`;
