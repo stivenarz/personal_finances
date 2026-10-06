@@ -539,80 +539,8 @@ function getMoneyValue(value) {
     return parseFloat(value) || 0;
 }
 
-function formatMoneyString(str) {
-    if (!str) return '';
-
-    // Keep only digits, remove everything else (including dots)
-    const cleanStr = str.replace(/[^\d]/g, '');
-
-    if (!cleanStr) return '';
-
-    // Add dots every 3 digits from right to left
-    let result = '';
-    for (let i = 0; i < cleanStr.length; i++) {
-        const posFromRight = cleanStr.length - i - 1;
-        if (posFromRight > 0 && posFromRight % 3 === 0) {
-            result += '.';
-        }
-        result += cleanStr[i];
-    }
-
-    return result;
-}
-
-function setupMoneyInputFormatting() {
-    const moneyInputIds = [
-        'gasto-monto',
-        'ingreso-monto',
-        'deuda-inicial',
-        'deuda-saldo',
-        'deuda-cuota',
-        'meta-ahorro-monto',
-        'categoria-presupuesto'
-    ];
-
-    moneyInputIds.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('keypress', (e) => {
-                // Only allow digits (0-9)
-                if (!/[\d]/.test(e.key)) {
-                    e.preventDefault();
-                }
-            });
-
-            input.addEventListener('input', (e) => {
-                const cursorPos = e.target.selectionStart;
-                const oldValue = e.target.value;
-
-                // Clean any non-digit characters first
-                const cleanedValue = oldValue.replace(/[^\d]/g, '');
-                const formatted = formatMoneyString(cleanedValue);
-
-                if (formatted !== oldValue) {
-                    e.target.value = formatted;
-
-                    // Restore cursor position
-                    if (cursorPos !== null) {
-                        e.target.selectionStart = Math.min(cursorPos, formatted.length);
-                        e.target.selectionEnd = e.target.selectionStart;
-                    }
-                }
-            });
-
-            input.addEventListener('blur', (e) => {
-                if (e.target.value) {
-                    e.target.value = formatMoneyString(e.target.value);
-                }
-            });
-        }
-    });
-}
 
 function setupEventListeners() {
-    // Setup money input formatting
-    setupMoneyInputFormatting();
-
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
