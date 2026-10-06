@@ -532,11 +532,32 @@ function setupSyncButton() {
 
 function getMoneyValue(value) {
     if (typeof value === 'string') {
-        // Remove all dots (thousand separators) and keep only digits and decimal point
-        const cleanValue = value.replace(/\./g, '').replace(/[^\d,]/g, '').replace(',', '.');
+        // Remove all dots (thousand separators) and keep only digits
+        const cleanValue = value.replace(/\./g, '').replace(/[^\d]/g, '');
         return parseFloat(cleanValue) || 0;
     }
     return parseFloat(value) || 0;
+}
+
+function formatMoneyString(str) {
+    if (!str) return '';
+
+    // Remove all dots (separators) and keep only digits
+    const cleanStr = str.replace(/\./g, '').replace(/[^\d]/g, '');
+
+    if (!cleanStr) return '';
+
+    // Add dots every 3 digits from right to left
+    let result = '';
+    for (let i = 0; i < cleanStr.length; i++) {
+        const posFromRight = cleanStr.length - i - 1;
+        if (posFromRight > 0 && posFromRight % 3 === 0) {
+            result += '.';
+        }
+        result += cleanStr[i];
+    }
+
+    return result;
 }
 
 function setupMoneyInputFormatting() {
@@ -555,20 +576,12 @@ function setupMoneyInputFormatting() {
         if (input) {
             input.addEventListener('input', (e) => {
                 const cursorPos = e.target.selectionStart;
-                let value = e.target.value.replace(/\./g, '');
+                const oldValue = e.target.value;
 
-                if (value === '') {
-                    return;
-                }
+                const formatted = formatMoneyString(oldValue);
 
-                const numValue = parseFloat(value) || 0;
-                if (numValue > 0) {
-                    const formatted = numValue.toLocaleString('es-CO', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2
-                    });
-
-                    const oldLength = e.target.value.length;
+                if (formatted !== oldValue) {
+                    const oldLength = oldValue.length;
                     const newLength = formatted.length;
                     const lengthDiff = newLength - oldLength;
 
@@ -584,13 +597,7 @@ function setupMoneyInputFormatting() {
 
             input.addEventListener('blur', (e) => {
                 if (e.target.value) {
-                    const cleanValue = e.target.value.replace(/\./g, '');
-                    const numValue = parseFloat(cleanValue) || 0;
-                    const formatted = numValue.toLocaleString('es-CO', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2
-                    });
-                    e.target.value = formatted;
+                    e.target.value = formatMoneyString(e.target.value);
                 }
             });
         }
