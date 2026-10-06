@@ -10,8 +10,8 @@
  * - Network-first para datos dinámicos
  */
 
-const CACHE_VERSION = 'finanzas-v12';
-const RUNTIME_CACHE = 'finanzas-runtime-v12';
+const CACHE_VERSION = 'finanzas-v13';
+const RUNTIME_CACHE = 'finanzas-runtime-v13';
 
 // Archivos críticos que se cachean al instalar
 const CORE_ASSETS = [

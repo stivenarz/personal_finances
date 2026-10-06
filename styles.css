@@ -798,7 +798,7 @@ body {
         top: env(safe-area-inset-top);
         width: 75%;
         max-width: 260px;
-        height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 30px);
         z-index: 999;
         transform: translateX(-100%);
     }
