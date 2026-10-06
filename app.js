@@ -2456,7 +2456,7 @@ function updateDashboard() {
     updateSavingsGoals();
 
     // Update charts
-    updateCharts(monthTransactions);
+    updateCharts(APP.data.transactions);
 }
 
 function updateBudgetComparison(transactions) {
