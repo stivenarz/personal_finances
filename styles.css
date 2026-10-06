@@ -111,20 +111,13 @@ body {
 /* SIDEBAR */
 .sidebar {
     width: 280px;
-    background:
-        linear-gradient(to bottom,
-            var(--bg-secondary) 0%,
-            var(--bg-secondary) env(safe-area-inset-top),
-            #667eea env(safe-area-inset-top),
-            #764ba2 100%
-        );
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     overflow-y: auto;
     transition: transform 0.3s ease;
-    padding-top: env(safe-area-inset-top);
 }
 
 .sidebar-footer {
@@ -137,7 +130,7 @@ body {
 }
 
 .sidebar-header {
-    padding: 30px 20px;
+    padding: calc(30px + env(safe-area-inset-top)) 20px 30px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
     display: flex;
