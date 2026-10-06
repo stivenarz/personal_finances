@@ -304,6 +304,39 @@ function setupMobileMenu() {
             toggle.setAttribute('aria-expanded', 'false');
         }
     });
+
+    // Swipe gestures para abrir/cerrar menú
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, false);
+
+    document.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+
+        // Asegurar que es más horizontal que vertical (swipe, no scroll)
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+            // Swipe desde el borde izquierdo hacia la derecha = abrir menú
+            if (touchStartX < 50 && deltaX > 50) {
+                sidebar.classList.add('open');
+                toggle.classList.add('hidden');
+                toggle.setAttribute('aria-expanded', 'true');
+            }
+            // Swipe hacia la izquierda = cerrar menú
+            else if (sidebar.classList.contains('open') && deltaX < -50) {
+                sidebar.classList.remove('open');
+                toggle.classList.remove('hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        }
+    }, false);
 }
 
 function loadDataFromStorage() {
