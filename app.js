@@ -566,6 +566,12 @@ function setupEventListeners() {
     const formMetaAhorro = document.getElementById('form-meta-ahorro');
     if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
 
+    const formAbonoAhorro = document.getElementById('form-abono-ahorro');
+    if (formAbonoAhorro) formAbonoAhorro.addEventListener('submit', handleAbonoAhorro);
+
+    const formRetiroAhorro = document.getElementById('form-retiro-ahorro');
+    if (formRetiroAhorro) formRetiroAhorro.addEventListener('submit', handleRetiroAhorro);
+
     // Gastos filters
     document.getElementById('gastos-search').addEventListener('input', renderExpensesList);
     document.getElementById('gastos-filter-categoria').addEventListener('change', renderExpensesList);
@@ -1474,6 +1480,7 @@ function renderAccounts() {
     const selects = ['gasto-cuenta', 'ingreso-cuenta', 'trans-filter-cuenta'];
     selects.forEach(id => {
         const select = document.getElementById(id);
+        if (!select) return;
         select.innerHTML = '<option value="">Seleccionar cuenta</option>';
         APP.data.accounts.forEach(acc => {
             const option = document.createElement('option');
@@ -1482,6 +1489,62 @@ function renderAccounts() {
             select.appendChild(option);
         });
     });
+
+    // Render cuentas disponibles para abono
+    const abonoOrigen = document.getElementById('abono-cuenta-origen');
+    if (abonoOrigen) {
+        abonoOrigen.innerHTML = '<option value="">Seleccionar cuenta</option>';
+        APP.data.accounts
+            .filter(acc => acc.type !== 'Ahorros')
+            .forEach(acc => {
+                const option = document.createElement('option');
+                option.value = acc.id;
+                option.textContent = `${acc.name} ($${formatNumber(acc.balance)})`;
+                abonoOrigen.appendChild(option);
+            });
+    }
+
+    // Render cuentas de ahorro para destino de abono
+    const abonoDestino = document.getElementById('abono-cuenta-destino');
+    if (abonoDestino) {
+        abonoDestino.innerHTML = '<option value="">Seleccionar cuenta</option>';
+        APP.data.accounts
+            .filter(acc => acc.type === 'Ahorros')
+            .forEach(acc => {
+                const option = document.createElement('option');
+                option.value = acc.id;
+                option.textContent = `${acc.name} ($${formatNumber(acc.balance)})`;
+                abonoDestino.appendChild(option);
+            });
+    }
+
+    // Render cuentas de ahorro para retiro
+    const retiroOrigen = document.getElementById('retiro-cuenta-origen');
+    if (retiroOrigen) {
+        retiroOrigen.innerHTML = '<option value="">Seleccionar cuenta</option>';
+        APP.data.accounts
+            .filter(acc => acc.type === 'Ahorros')
+            .forEach(acc => {
+                const option = document.createElement('option');
+                option.value = acc.id;
+                option.textContent = `${acc.name} ($${formatNumber(acc.balance)})`;
+                retiroOrigen.appendChild(option);
+            });
+    }
+
+    // Render cuentas disponibles para destino de retiro
+    const retiroDestino = document.getElementById('retiro-cuenta-destino');
+    if (retiroDestino) {
+        retiroDestino.innerHTML = '<option value="">Seleccionar cuenta</option>';
+        APP.data.accounts
+            .filter(acc => acc.type !== 'Ahorros')
+            .forEach(acc => {
+                const option = document.createElement('option');
+                option.value = acc.id;
+                option.textContent = `${acc.name} ($${formatNumber(acc.balance)})`;
+                retiroDestino.appendChild(option);
+            });
+    }
 }
 
 function renderAccountsList() {
@@ -1702,6 +1765,140 @@ function renderSavingsGoalsList() {
     }).join('');
 }
 
+function handleAbonoAhorro(e) {
+    e.preventDefault();
+
+    const origenId = document.getElementById('abono-cuenta-origen').value;
+    const destinoId = document.getElementById('abono-cuenta-destino').value;
+    const amount = getMoneyValue(document.getElementById('abono-monto').value);
+    const descripcion = document.getElementById('abono-descripcion').value;
+
+    if (!origenId) {
+        showNotification('❌ Selecciona una cuenta origen', 'error');
+        return;
+    }
+    if (!destinoId) {
+        showNotification('❌ Selecciona una cuenta destino', 'error');
+        return;
+    }
+    if (amount <= 0) {
+        showNotification('❌ Ingresa un monto válido', 'error');
+        return;
+    }
+
+    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
+    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+
+    if (!cuentaOrigen || !cuentaDestino) {
+        showNotification('❌ Cuenta no encontrada', 'error');
+        return;
+    }
+
+    if (cuentaOrigen.balance < amount) {
+        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
+        return;
+    }
+
+    cuentaOrigen.balance -= amount;
+    cuentaDestino.balance += amount;
+
+    const transaction = {
+        id: 'trans-' + Date.now(),
+        type: 'Egreso',
+        category: 'Ahorros',
+        description: `Abono a ahorros: ${descripcion || cuentaDestino.name}`,
+        amount: amount,
+        account: origenId,
+        date: new Date().toISOString().split('T')[0],
+        createdAt: Date.now()
+    };
+
+    APP.data.transactions.push(transaction);
+
+    if (APP.isOnline && window.firebaseDB) {
+        Promise.all([
+            window.firebaseDB.saveData('accounts', cuentaOrigen),
+            window.firebaseDB.saveData('accounts', cuentaDestino),
+            window.firebaseDB.saveData('transactions', transaction)
+        ]).catch(err => console.error('Error guardando en Firebase:', err));
+    } else {
+        saveOfflineData();
+    }
+
+    e.target.reset();
+    renderAccountsList();
+    renderAccounts();
+    updateDashboard();
+    showNotification('✅ Abono a ahorros realizado', 'success');
+}
+
+function handleRetiroAhorro(e) {
+    e.preventDefault();
+
+    const origenId = document.getElementById('retiro-cuenta-origen').value;
+    const destinoId = document.getElementById('retiro-cuenta-destino').value;
+    const amount = getMoneyValue(document.getElementById('retiro-monto').value);
+    const descripcion = document.getElementById('retiro-descripcion').value;
+
+    if (!origenId) {
+        showNotification('❌ Selecciona una cuenta origen', 'error');
+        return;
+    }
+    if (!destinoId) {
+        showNotification('❌ Selecciona una cuenta destino', 'error');
+        return;
+    }
+    if (amount <= 0) {
+        showNotification('❌ Ingresa un monto válido', 'error');
+        return;
+    }
+
+    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
+    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+
+    if (!cuentaOrigen || !cuentaDestino) {
+        showNotification('❌ Cuenta no encontrada', 'error');
+        return;
+    }
+
+    if (cuentaOrigen.balance < amount) {
+        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
+        return;
+    }
+
+    cuentaOrigen.balance -= amount;
+    cuentaDestino.balance += amount;
+
+    const transaction = {
+        id: 'trans-' + Date.now(),
+        type: 'Ingreso',
+        category: 'Retiro de Ahorros',
+        description: `Retiro de ahorros: ${descripcion || cuentaOrigen.name}`,
+        amount: amount,
+        account: destinoId,
+        date: new Date().toISOString().split('T')[0],
+        createdAt: Date.now()
+    };
+
+    APP.data.transactions.push(transaction);
+
+    if (APP.isOnline && window.firebaseDB) {
+        Promise.all([
+            window.firebaseDB.saveData('accounts', cuentaOrigen),
+            window.firebaseDB.saveData('accounts', cuentaDestino),
+            window.firebaseDB.saveData('transactions', transaction)
+        ]).catch(err => console.error('Error guardando en Firebase:', err));
+    } else {
+        saveOfflineData();
+    }
+
+    e.target.reset();
+    renderAccountsList();
+    renderAccounts();
+    updateDashboard();
+    showNotification('✅ Retiro de ahorros realizado', 'success');
+}
+
 window.showSavingsAbono = function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
     if (!goal) return;
@@ -1906,8 +2103,14 @@ function updateDashboard() {
     const balance = totalIncome - totalExpenses;
     const savingRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 
-    // Calculate account balances
-    const totalAccountBalance = APP.data.accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+    // Calculate account balances (separate available from savings)
+    const availableBalance = APP.data.accounts
+        .filter(acc => acc.type !== 'Ahorros')
+        .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+    const savingsBalance = APP.data.accounts
+        .filter(acc => acc.type === 'Ahorros')
+        .reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
     // Calculate total savings goals
     const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
@@ -1917,8 +2120,8 @@ function updateDashboard() {
     document.getElementById('kpi-egresos').textContent = `$${formatNumber(totalExpenses)}`;
     document.getElementById('kpi-balance').textContent = `$${formatNumber(balance)}`;
     document.getElementById('kpi-ahorro').textContent = `${savingRate.toFixed(1)}%`;
-    document.getElementById('kpi-saldo-cuentas').textContent = `$${formatNumber(totalAccountBalance)}`;
-    document.getElementById('kpi-total-ahorros').textContent = `$${formatNumber(totalSavings)}`;
+    document.getElementById('kpi-saldo-disponible').textContent = `$${formatNumber(availableBalance)}`;
+    document.getElementById('kpi-total-ahorros').textContent = `$${formatNumber(savingsBalance + totalSavings)}`;
 
     // Update budget comparison
     updateBudgetComparison(monthTransactions);

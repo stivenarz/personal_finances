@@ -105,8 +105,8 @@
                             <div class="kpi-card" style="border-left-color: #8b5cf6;">
                                 <div class="kpi-icon">🏦</div>
                                 <div class="kpi-content">
-                                    <div class="kpi-label">Saldo Cuentas</div>
-                                    <div class="kpi-value" id="kpi-saldo-cuentas">$0</div>
+                                    <div class="kpi-label">Saldo Disponible</div>
+                                    <div class="kpi-value" id="kpi-saldo-disponible">$0</div>
                                 </div>
                             </div>
                             <div class="kpi-card" style="border-left-color: #ec4899;">
@@ -328,6 +328,61 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Movimientos de Ahorros -->
+                    <div class="list-section">
+                        <h3>Abono a Ahorros</h3>
+                        <form id="form-abono-ahorro" class="form-container">
+                            <div class="form-group">
+                                <label>Cuenta Origen (Disponible)</label>
+                                <select id="abono-cuenta-origen" required>
+                                    <option value="">Seleccionar cuenta</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuenta Destino (Ahorro)</label>
+                                <select id="abono-cuenta-destino" required>
+                                    <option value="">Seleccionar cuenta</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Monto ($)</label>
+                                <input type="text" id="abono-monto" inputmode="decimal" placeholder="0" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Descripción</label>
+                                <input type="text" id="abono-descripcion" placeholder="Ej: Ahorro mensual">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Realizar Abono</button>
+                        </form>
+                    </div>
+
+                    <div class="list-section">
+                        <h3>Retiro de Ahorros</h3>
+                        <form id="form-retiro-ahorro" class="form-container">
+                            <div class="form-group">
+                                <label>Cuenta Origen (Ahorro)</label>
+                                <select id="retiro-cuenta-origen" required>
+                                    <option value="">Seleccionar cuenta</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cuenta Destino (Disponible)</label>
+                                <select id="retiro-cuenta-destino" required>
+                                    <option value="">Seleccionar cuenta</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Monto ($)</label>
+                                <input type="text" id="retiro-monto" inputmode="decimal" placeholder="0" required min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Descripción</label>
+                                <input type="text" id="retiro-descripcion" placeholder="Ej: Retiro para viaje">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Realizar Retiro</button>
+                        </form>
                     </div>
 
                     <div class="list-section">
