@@ -34,7 +34,12 @@
       "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*deuda-inicial.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"deuda-inicial\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
       "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*deuda-cuota.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"deuda-cuota\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
       "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*meta-ahorro-monto.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"meta-ahorro-monto\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
-      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*categoria-presupuesto.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"categoria-presupuesto\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)"
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*categoria-presupuesto.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"categoria-presupuesto\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
+      "Bash(sed -i '' 's/type=\"number\" id=\"gasto-monto\"/type=\"text\" id=\"gasto-monto\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
+      "Bash(sed -i '' 's/type=\"number\" id=\"ingreso-monto\"/type=\"text\" id=\"ingreso-monto\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
+      "Bash(sed -i '' 's/type=\"number\" id=\"deuda-inicial\"/type=\"text\" id=\"deuda-inicial\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
+      "Bash(sed -i '' 's/type=\"number\" id=\"deuda-saldo\"/type=\"text\" id=\"deuda-saldo\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)",
+      "Bash(sed -i '' 's/type=\"number\" id=\"deuda-cuota\"/type=\"text\" id=\"deuda-cuota\" inputmode=\"decimal\"/g' /Volumes/BackUp/sites/personal-finances/index.html)"
     ]
   }
 }
