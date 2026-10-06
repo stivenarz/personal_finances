@@ -118,6 +118,7 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     overflow-y: auto;
     transition: transform 0.3s ease;
+    margin-top: env(safe-area-inset-top);
 }
 
 .sidebar-footer {
@@ -130,7 +131,7 @@ body {
 }
 
 .sidebar-header {
-    padding: calc(30px + env(safe-area-inset-top)) 20px 30px 20px;
+    padding: 30px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
     display: flex;
@@ -794,10 +795,10 @@ body {
     .sidebar {
         position: fixed;
         left: 0;
-        top: 0;
+        top: env(safe-area-inset-top);
         width: 75%;
         max-width: 260px;
-        height: 100vh;
+        height: calc(100vh - env(safe-area-inset-top));
         z-index: 999;
         transform: translateX(-100%);
     }
