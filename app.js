@@ -128,7 +128,7 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: max(20px, calc(20px + env(safe-area-inset-top)));
         right: 20px;
         padding: 15px 20px;
         background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#FF9800' : '#2196F3'};
