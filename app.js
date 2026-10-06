@@ -1766,11 +1766,14 @@ window.promptAbonoAhorros = function(goalId) {
 
 window.promptRetiroAhorros = function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
-    if (!goal) return;
+    if (!goal || goal.currentAmount <= 0) {
+        showNotification('❌ No hay saldo en esta meta de ahorro', 'error');
+        return;
+    }
 
     const savingAccount = APP.data.accounts.find(a => a.type === 'Ahorros');
-    if (!savingAccount || savingAccount.balance <= 0) {
-        showNotification('❌ No hay saldo en cuenta de ahorros', 'error');
+    if (!savingAccount || savingAccount.balance < goal.currentAmount) {
+        showNotification('❌ Saldo insuficiente en cuenta de ahorros', 'error');
         return;
     }
 
@@ -1858,6 +1861,7 @@ window.promptRetiroAhorros = function(goalId) {
 
         savingAccount.balance -= amount;
         cuentaDestino.balance += amount;
+        goal.currentAmount -= amount;
 
         const transaction = {
             id: 'trans-' + Date.now(),
@@ -1876,6 +1880,7 @@ window.promptRetiroAhorros = function(goalId) {
             Promise.all([
                 window.firebaseDB.saveData('accounts', savingAccount),
                 window.firebaseDB.saveData('accounts', cuentaDestino),
+                window.firebaseDB.saveData('goals', goal),
                 window.firebaseDB.saveData('transactions', transaction)
             ]).catch(err => console.error('Error guardando en Firebase:', err));
         } else {
@@ -1883,6 +1888,7 @@ window.promptRetiroAhorros = function(goalId) {
         }
 
         modal.remove();
+        renderSavingsGoalsList();
         renderAccountsList();
         renderAccounts();
         updateDashboard();
