@@ -2293,15 +2293,19 @@ async function performDeleteAllData() {
     try {
         showNotification('🔄 Eliminando datos... Por favor espera', 'info');
 
-        // Preserve Firebase config
+        // Preserve Firebase config and database mode preference
         const firebaseConfig = localStorage.getItem('firebaseConfig');
+        const dbModePreference = localStorage.getItem('db_mode_preference');
 
         // Delete local data
         localStorage.clear();
 
-        // Restore Firebase config
+        // Restore Firebase config and database mode preference
         if (firebaseConfig) {
             localStorage.setItem('firebaseConfig', firebaseConfig);
+        }
+        if (dbModePreference) {
+            localStorage.setItem('db_mode_preference', dbModePreference);
         }
 
         // Delete Firebase data
