@@ -256,7 +256,7 @@ body {
 .views-container {
     flex: 1;
     overflow-y: auto;
-    padding: 30px 30px calc(30px + env(safe-area-inset-bottom)) 30px;
+    padding: 30px 30px 10px 30px;
 }
 
 .view {
@@ -850,7 +850,7 @@ body {
     }
 
     .views-container {
-        padding: 12px 12px calc(150px + env(safe-area-inset-bottom)) 12px;
+        padding: 12px 12px 10px 12px;
     }
 
     .top-header {
