@@ -542,8 +542,8 @@ function getMoneyValue(value) {
 function formatMoneyString(str) {
     if (!str) return '';
 
-    // Remove all dots (separators) and keep only digits
-    const cleanStr = str.replace(/\./g, '').replace(/[^\d]/g, '');
+    // Keep only digits, remove everything else (including dots)
+    const cleanStr = str.replace(/[^\d]/g, '');
 
     if (!cleanStr) return '';
 
@@ -574,22 +574,27 @@ function setupMoneyInputFormatting() {
     moneyInputIds.forEach(id => {
         const input = document.getElementById(id);
         if (input) {
+            input.addEventListener('keypress', (e) => {
+                // Only allow digits (0-9)
+                if (!/[\d]/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
             input.addEventListener('input', (e) => {
                 const cursorPos = e.target.selectionStart;
                 const oldValue = e.target.value;
 
-                const formatted = formatMoneyString(oldValue);
+                // Clean any non-digit characters first
+                const cleanedValue = oldValue.replace(/[^\d]/g, '');
+                const formatted = formatMoneyString(cleanedValue);
 
                 if (formatted !== oldValue) {
-                    const oldLength = oldValue.length;
-                    const newLength = formatted.length;
-                    const lengthDiff = newLength - oldLength;
-
                     e.target.value = formatted;
 
-                    // Restore cursor position approximately
+                    // Restore cursor position
                     if (cursorPos !== null) {
-                        e.target.selectionStart = Math.min(cursorPos + lengthDiff, formatted.length);
+                        e.target.selectionStart = Math.min(cursorPos, formatted.length);
                         e.target.selectionEnd = e.target.selectionStart;
                     }
                 }
