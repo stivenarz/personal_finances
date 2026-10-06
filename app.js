@@ -2152,9 +2152,18 @@ async function handleDeleteAllData() {
     }
 
     try {
-        // Delete local data
+        // Preserve Firebase config
+        const firebaseConfig = localStorage.getItem('firebaseConfig');
+
+        // Delete local data (but preserve firebaseConfig)
         localStorage.clear();
-        console.log('Cache local eliminado');
+
+        // Restore Firebase config
+        if (firebaseConfig) {
+            localStorage.setItem('firebaseConfig', firebaseConfig);
+        }
+
+        console.log('Cache local eliminado (configuración de Firebase preservada)');
 
         // Delete Firebase data
         if (APP.isOnline && window.firebaseDB) {
