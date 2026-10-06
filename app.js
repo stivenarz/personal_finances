@@ -1,15 +1,40 @@
+/**
+ * APLICACIÓN DE FINANZAS PERSONALES
+ * ===================================
+ * Sistema completo de gestión de finanzas personales con almacenamiento local.
+ *
+ * Características:
+ * - Dashboard con KPIs en tiempo real
+ * - Gestión de gastos, ingresos y deudas
+ * - Metas de ahorro y presupuesto
+ * - Gráficos dinámicos
+ * - Almacenamiento en LocalStorage
+ *
+ * Estructura de datos:
+ * - Transacciones: Ingresos, Egresos, Abonos a Metas, Pagos de Deudas
+ * - Cuentas: Corriente, Tarjeta, Efectivo, Ahorros
+ * - Categorías: Personalizables por tipo de transacción
+ * - Deudas: Con seguimiento de saldo y pagos
+ * - Metas de Ahorro: Con depósitos y retiros
+ */
+
 const APP = {
+    // Mes actual para filtrado de datos
     currentMonth: new Date().toISOString().slice(0, 7),
+    // Estado de conexión
     isOnline: false,
+    // Almacenamiento central de datos
     data: {
-        transactions: [],
-        debts: [],
-        accounts: [],
-        categories: [],
-        goals: [],
-        debtPayments: []
+        transactions: [],  // Todos los movimientos (ingresos, egresos, abonos, pagos)
+        debts: [],         // Deudas registradas
+        accounts: [],      // Cuentas bancarias/de efectivo
+        categories: [],    // Categorías de gastos e ingresos
+        goals: [],         // Metas de ahorro
+        debtPayments: []   // Historial de pagos de deudas
     },
+    // Instancias de gráficos (Chart.js)
     charts: {},
+    // Configuración para sincronización con Google Sheets (opcional)
     gsheet: {
         url: '',
         scriptUrl: '',
