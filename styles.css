@@ -118,7 +118,6 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     overflow-y: auto;
     transition: transform 0.3s ease;
-    margin-top: env(safe-area-inset-top);
 }
 
 .sidebar-footer {
