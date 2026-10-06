@@ -532,7 +532,9 @@ function setupSyncButton() {
 
 function getMoneyValue(value) {
     if (typeof value === 'string') {
-        return parseFloat(value.replace(/\./g, '')) || 0;
+        // Remove all dots (thousand separators) and keep only digits and decimal point
+        const cleanValue = value.replace(/\./g, '').replace(/[^\d,]/g, '').replace(',', '.');
+        return parseFloat(cleanValue) || 0;
     }
     return parseFloat(value) || 0;
 }
@@ -552,15 +554,31 @@ function setupMoneyInputFormatting() {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', (e) => {
+                const cursorPos = e.target.selectionStart;
                 let value = e.target.value.replace(/\./g, '');
 
-                if (value) {
-                    const numValue = parseFloat(value) || 0;
+                if (value === '') {
+                    return;
+                }
+
+                const numValue = parseFloat(value) || 0;
+                if (numValue > 0) {
                     const formatted = numValue.toLocaleString('es-CO', {
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 2
                     });
+
+                    const oldLength = e.target.value.length;
+                    const newLength = formatted.length;
+                    const lengthDiff = newLength - oldLength;
+
                     e.target.value = formatted;
+
+                    // Restore cursor position approximately
+                    if (cursorPos !== null) {
+                        e.target.selectionStart = Math.min(cursorPos + lengthDiff, formatted.length);
+                        e.target.selectionEnd = e.target.selectionStart;
+                    }
                 }
             });
 
