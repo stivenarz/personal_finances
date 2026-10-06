@@ -74,6 +74,9 @@ body {
     color: var(--text-primary);
     background-color: var(--bg-secondary);
     line-height: 1.6;
+    /* Respetar áreas seguras en iPhone (notch, reloj, home indicator) */
+    padding-top: max(0px, env(safe-area-inset-top));
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
 }
 
 .container {
@@ -200,6 +203,10 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Respeta notch superior en iPhone */
+    padding-top: max(10px, env(safe-area-inset-top, 10px));
+    /* Respeta home indicator inferior en iPhone */
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
 }
 
 /* HEADER */
@@ -250,6 +257,8 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 30px;
+    /* Extra padding inferior para evitar que el home indicator tape contenido */
+    padding-bottom: max(30px, calc(env(safe-area-inset-bottom, 0px) + 30px));
 }
 
 .view {
@@ -844,7 +853,7 @@ body {
 
     .views-container {
         padding: 12px;
-        padding-bottom: 150px;
+        padding-bottom: max(150px, calc(env(safe-area-inset-bottom, 0px) + 150px));
     }
 
     .top-header {
