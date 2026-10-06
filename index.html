@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Aplicación de gestión de finanzas personales con almacenamiento local y funcionamiento offline">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Finanzas">
+
     <title>Finanzas Personales - Control Integral</title>
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle'>💰</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='50'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle'>💰</text></svg>">
+
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -521,6 +532,47 @@
             </div>
         </main>
     </div>
+
+    <!-- Service Worker Registration para PWA -->
+    <script>
+        /**
+         * Registrar Service Worker para funcionalidad offline
+         * El service worker cachea archivos y proporciona acceso offline
+         */
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('[App] Service Worker registrado exitosamente:', registration);
+                        // Verificar actualizaciones cada 10 segundos
+                        setInterval(() => registration.update(), 10000);
+                    })
+                    .catch(error => console.error('[App] Error registrando Service Worker:', error));
+            });
+
+            // Detectar cuando hay una actualización disponible
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('[App] Nueva versión disponible - recargando');
+                // Recargar la página para usar la nueva versión
+                location.reload();
+            });
+
+            // Detectar cambios de conexión
+            window.addEventListener('online', () => {
+                console.log('[App] ✅ Conexión restaurada');
+                // Intentar sincronizar datos
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ action: 'sync' });
+                }
+            });
+
+            window.addEventListener('offline', () => {
+                console.log('[App] 📡 Sin conexión - usando caché');
+            });
+        } else {
+            console.warn('[App] Service Workers no soportados en este navegador');
+        }
+    </script>
 
     <script type="module">
         import './firebase-config.js';
