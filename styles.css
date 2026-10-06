@@ -118,6 +118,18 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     overflow-y: auto;
     transition: transform 0.3s ease;
+    position: relative;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--bg-secondary);
+    z-index: 1;
 }
 
 .sidebar-footer {
@@ -127,15 +139,19 @@ body {
     border-top: 1px solid rgba(255,255,255,0.1);
     font-size: 12px;
     color: rgba(255,255,255,0.7);
+    position: relative;
+    z-index: 2;
 }
 
 .sidebar-header {
-    padding: calc(30px + env(safe-area-inset-top)) 20px 30px 20px;
+    padding: 30px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    z-index: 2;
 }
 
 .sidebar-header h1 {
@@ -164,6 +180,8 @@ body {
 .sidebar-nav {
     flex: 1;
     padding: 20px 0;
+    position: relative;
+    z-index: 2;
 }
 
 .nav-item {
