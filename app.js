@@ -565,6 +565,8 @@ function setupEventListeners() {
     document.getElementById('form-categoria').addEventListener('submit', handleAddCategory);
     const formMetaAhorro = document.getElementById('form-meta-ahorro');
     if (formMetaAhorro) formMetaAhorro.addEventListener('submit', handleAddSavingsGoal);
+    const formTransferencia = document.getElementById('form-transferencia');
+    if (formTransferencia) formTransferencia.addEventListener('submit', handleTransferencia);
 
     // Gastos filters
     document.getElementById('gastos-search').addEventListener('input', renderExpensesList);
@@ -1558,9 +1560,178 @@ function renderAccountsList() {
     }).join('');
 }
 
+function handleTransferencia(e) {
+    e.preventDefault();
+
+    const origenId = document.getElementById('transferencia-origen').value;
+    const destinoId = document.getElementById('transferencia-destino').value;
+    const amount = getMoneyValue(document.getElementById('transferencia-monto').value);
+    const descripcion = document.getElementById('transferencia-descripcion').value;
+
+    if (!origenId) {
+        showNotification('❌ Selecciona una cuenta origen', 'error');
+        return;
+    }
+    if (!destinoId) {
+        showNotification('❌ Selecciona una cuenta destino', 'error');
+        return;
+    }
+    if (origenId === destinoId) {
+        showNotification('❌ Las cuentas origen y destino no pueden ser iguales', 'error');
+        return;
+    }
+    if (amount <= 0) {
+        showNotification('❌ Ingresa un monto válido', 'error');
+        return;
+    }
+
+    const cuentaOrigen = APP.data.accounts.find(acc => acc.id === origenId);
+    const cuentaDestino = APP.data.accounts.find(acc => acc.id === destinoId);
+
+    if (!cuentaOrigen || !cuentaDestino) {
+        showNotification('❌ Cuenta no encontrada', 'error');
+        return;
+    }
+
+    if (cuentaOrigen.balance < amount) {
+        showNotification(`❌ Saldo insuficiente. Disponible: $${formatNumber(cuentaOrigen.balance)}`, 'error');
+        return;
+    }
+
+    cuentaOrigen.balance -= amount;
+    cuentaDestino.balance += amount;
+
+    const transaction = {
+        id: 'trans-' + Date.now(),
+        type: 'Transferencia',
+        category: 'Transferencia',
+        description: `Transferencia de ${cuentaOrigen.name} a ${cuentaDestino.name}: ${descripcion || ''}`,
+        amount: amount,
+        account: origenId,
+        date: new Date().toISOString().split('T')[0],
+        createdAt: Date.now()
+    };
+
+    APP.data.transactions.push(transaction);
+
+    if (APP.isOnline && window.firebaseDB) {
+        Promise.all([
+            window.firebaseDB.saveData('accounts', cuentaOrigen),
+            window.firebaseDB.saveData('accounts', cuentaDestino),
+            window.firebaseDB.saveData('transactions', transaction)
+        ]).catch(err => console.error('Error guardando en Firebase:', err));
+    } else {
+        saveOfflineData();
+    }
+
+    e.target.reset();
+    renderAccountsList();
+    renderAccounts();
+    updateDashboard();
+    showNotification(`✅ Transferencia de $${formatNumber(amount)} realizada de ${cuentaOrigen.name} a ${cuentaDestino.name}`, 'success');
+}
+
 window.deleteAccount = async function(accountId) {
     const account = APP.data.accounts.find(a => a.id === accountId);
     if (!account) return;
+
+    if (account.balance > 0) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+
+        const availableAccounts = APP.data.accounts
+            .filter(a => a.id !== accountId)
+            .map(acc => `<option value="${acc.id}">${acc.name}</option>`)
+            .join('');
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        `;
+
+        content.innerHTML = `
+            <h2 style="margin-top: 0; color: #d32f2f;">⚠️ Cuenta con Saldo</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                La cuenta <strong>"${account.name}"</strong> tiene un saldo de <strong>$${formatNumber(account.balance)}</strong>.<br><br>
+                Para eliminarla, debes transferir este saldo a otra cuenta.
+            </p>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; color: #333; font-weight: 600;">Transferir a:</label>
+                <select id="transferDestinoCuenta" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <option value="">-- Selecciona una cuenta --</option>
+                    ${availableAccounts}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="confirmDeleteCuenta" style="flex: 1; padding: 12px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">Transferir y Eliminar</button>
+                <button id="cancelDeleteCuenta" style="flex: 1; padding: 12px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">Cancelar</button>
+            </div>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        document.getElementById('confirmDeleteCuenta').addEventListener('click', async () => {
+            const destinoId = document.getElementById('transferDestinoCuenta').value;
+            if (!destinoId) {
+                showNotification('❌ Selecciona una cuenta destino', 'error');
+                return;
+            }
+
+            const cuentaDestino = APP.data.accounts.find(a => a.id === destinoId);
+            if (!cuentaDestino) {
+                showNotification('❌ Cuenta no encontrada', 'error');
+                return;
+            }
+
+            cuentaDestino.balance += account.balance;
+            APP.data.accounts = APP.data.accounts.filter(a => a.id !== accountId);
+
+            if (APP.isOnline && window.firebaseDB) {
+                try {
+                    await Promise.all([
+                        window.firebaseDB.deleteData('accounts', accountId),
+                        window.firebaseDB.saveData('accounts', cuentaDestino)
+                    ]);
+                } catch (err) {
+                    console.error('Error deleting account:', err);
+                    APP.data.accounts.push(account);
+                    showNotification('⚠️ Error al eliminar', 'warning');
+                }
+            } else {
+                saveOfflineData();
+            }
+
+            modal.remove();
+            renderAccountsList();
+            renderAccounts();
+            updateDashboard();
+            showNotification(`✅ Cuenta eliminada. Saldo transferido a ${cuentaDestino.name}`, 'success');
+        });
+
+        document.getElementById('cancelDeleteCuenta').addEventListener('click', () => {
+            modal.remove();
+        });
+        return;
+    }
 
     const confirmed = confirm(`¿Eliminar la cuenta "${account.name}"?`);
     if (!confirmed) {
