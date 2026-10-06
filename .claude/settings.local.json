@@ -29,7 +29,12 @@
       "Bash(curl -s http://localhost:8000/app.js)",
       "Bash(pkill -f \"python3 -m http.server\")",
       "Bash(node -c app.js)",
-      "Bash(kill -9 5967)"
+      "Bash(kill -9 5967)",
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*deuda-saldo.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"deuda-saldo\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*deuda-inicial.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"deuda-inicial\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*deuda-cuota.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"deuda-cuota\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*meta-ahorro-monto.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"meta-ahorro-monto\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)",
+      "Bash(sed -i '' 's/parseFloat\\(document\\\\.getElementById.*categoria-presupuesto.*\\\\.value\\)/getMoneyValue\\(document.getElementById\\(\"categoria-presupuesto\"\\).value\\)/g' /Volumes/BackUp/sites/personal-finances/app.js)"
     ]
   }
 }

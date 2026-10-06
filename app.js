@@ -530,7 +530,59 @@ function setupSyncButton() {
     });
 }
 
+function getMoneyValue(value) {
+    if (typeof value === 'string') {
+        return parseFloat(value.replace(/\./g, '')) || 0;
+    }
+    return parseFloat(value) || 0;
+}
+
+function setupMoneyInputFormatting() {
+    const moneyInputIds = [
+        'gasto-monto',
+        'ingreso-monto',
+        'deuda-inicial',
+        'deuda-saldo',
+        'deuda-cuota',
+        'meta-ahorro-monto',
+        'categoria-presupuesto'
+    ];
+
+    moneyInputIds.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\./g, '');
+
+                if (value) {
+                    const numValue = parseFloat(value) || 0;
+                    const formatted = numValue.toLocaleString('es-CO', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                    });
+                    e.target.value = formatted;
+                }
+            });
+
+            input.addEventListener('blur', (e) => {
+                if (e.target.value) {
+                    const cleanValue = e.target.value.replace(/\./g, '');
+                    const numValue = parseFloat(cleanValue) || 0;
+                    const formatted = numValue.toLocaleString('es-CO', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                    });
+                    e.target.value = formatted;
+                }
+            });
+        }
+    });
+}
+
 function setupEventListeners() {
+    // Setup money input formatting
+    setupMoneyInputFormatting();
+
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
@@ -743,7 +795,7 @@ function handleAddExpense(e) {
     e.preventDefault();
 
     const accountId = document.getElementById('gasto-cuenta').value;
-    const amount = parseFloat(document.getElementById('gasto-monto').value);
+    const amount = getMoneyValue(document.getElementById('gasto-monto').value);
     const categoryId = document.getElementById('gasto-categoria').value;
 
     if (!categoryId) {
@@ -872,7 +924,7 @@ function handleAddIncome(e) {
     e.preventDefault();
 
     const accountId = document.getElementById('ingreso-cuenta').value;
-    const amount = parseFloat(document.getElementById('ingreso-monto').value);
+    const amount = getMoneyValue(document.getElementById("ingreso-monto").value);
 
     if (!accountId) {
         alert('❌ Selecciona una cuenta');
@@ -996,13 +1048,13 @@ function calculateDebtMetrics(initialBalance, interestRate, termMonths) {
 function handleAddDebt(e) {
     e.preventDefault();
 
-    const initialBalance = parseFloat(document.getElementById('deuda-inicial').value) || parseFloat(document.getElementById('deuda-saldo').value);
+    const initialBalance = getMoneyValue(document.getElementById("deuda-saldo").value);
     const interestRateEl = document.getElementById('deuda-interes');
     const termMonthsEl = document.getElementById('deuda-plazo');
 
     let interestRate = interestRateEl ? parseFloat(interestRateEl.value) : 0;
     let termMonths = termMonthsEl ? parseFloat(termMonthsEl.value) : 0;
-    let monthlyPayment = parseFloat(document.getElementById('deuda-cuota').value);
+    let monthlyPayment = getMoneyValue(document.getElementById("deuda-cuota").value);
 
     // Auto-calculate if interest rate and term months are provided
     if (interestRate > 0 && termMonths > 0) {
@@ -1025,7 +1077,7 @@ function handleAddDebt(e) {
         id: 'debt-' + Date.now(),
         entity: document.getElementById('deuda-entidad').value,
         initialBalance: initialBalance,
-        currentBalance: parseFloat(document.getElementById('deuda-saldo').value),
+        currentBalance: getMoneyValue(document.getElementById("deuda-saldo").value),
         monthlyPayment: monthlyPayment,
         holder: document.getElementById('deuda-titular').value,
         paymentDay: paymentDay,
@@ -1526,7 +1578,7 @@ function handleAddCategory(e) {
         id: 'cat-' + Date.now(),
         name: document.getElementById('categoria-nombre').value,
         type: document.getElementById('categoria-tipo').value,
-        budget: parseFloat(document.getElementById('categoria-presupuesto').value) || 0
+        budget: getMoneyValue(document.getElementById("categoria-presupuesto").value) || 0
     };
 
     APP.data.categories.push(category);
@@ -1631,7 +1683,7 @@ function handleAddSavingsGoal(e) {
     const goal = {
         id: 'saving-' + Date.now(),
         description: document.getElementById('meta-ahorro-descripcion').value,
-        targetAmount: parseFloat(document.getElementById('meta-ahorro-monto').value),
+        targetAmount: getMoneyValue(document.getElementById("meta-ahorro-monto").value),
         currentAmount: parseFloat(document.getElementById('meta-ahorro-actual').value) || 0,
         deadline: document.getElementById('meta-ahorro-fecha').value,
         createdAt: Date.now()
