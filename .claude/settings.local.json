@@ -43,7 +43,8 @@
       "Bash(sed -i \"s/alert\\('✅ /showNotification\\('✅ ', 'success'\\)/g\" app.js)",
       "Bash(sed -i \"s/alert\\('❌ /showNotification\\('❌ ', 'error'\\)/g\" app.js)",
       "Bash(sed -i \"s/alert\\(\\\\`❌ /showNotification\\(\\\\`❌ /, 'error'\\)/g\" app.js)",
-      "Bash(sed -i \"s/alert\\('⚠️ /showNotification\\('⚠️ ', 'warning'\\)/g\" app.js)"
+      "Bash(sed -i \"s/alert\\('⚠️ /showNotification\\('⚠️ ', 'warning'\\)/g\" app.js)",
+      "Bash(grep -E \"\\\\.\\(md|html\\)$\")"
     ]
   }
 }

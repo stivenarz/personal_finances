@@ -1,116 +1,252 @@
 # 💰 Finanzas Personales - Control Integral
 
-Aplicación web moderna para gestionar tus finanzas personales con **Firebase** como backend en la nube.
+Aplicación web moderna para gestionar tus finanzas personales con arquitectura limpia y sin dependencias externas. Los datos se almacenan localmente en tu navegador.
 
-## Características
+## ✨ Características Principales
 
-### 📊 Dashboard
-- KPIs en tiempo real (ingresos, egresos, balance, tasa de ahorro)
-- Gráficos dinámicos (gastos por categoría, ingresos vs egresos)
-- Comparativa presupuesto vs gasto real
-- Deudas próximas a pagar con alertas
-- Metas de ahorro con progreso
+### 📊 Dashboard Integral
+- **KPIs en tiempo real**: Ingresos, Egresos, Balance, Tasa de Ahorro, Saldo Disponible, Total Ahorros
+- **Gráficos dinámicos**: Egresos por categoría, Ingresos vs Egresos
+- **Filtro central de mes**: Todos los datos respetan el mes seleccionado
+- **Actualización automática**: Los KPIs se recalculan al instante
 
 ### 💳 Gestión de Gastos
-- Registro de gastos con categoría, descripción y cuenta
-- Lista de gastos con búsqueda y filtros
-- Actualización automática del dashboard
+- Registro de gastos con categoría, descripción, monto y cuenta
+- Lista completa de gastos con búsqueda por descripción
+- Filtros por tipo y cuenta
+- Categorización automática
 
 ### 💵 Gestión de Ingresos
-- Múltiples fuentes de ingresos (Principal, Secundario, Inversiones)
-- Registro detallado de cada ingreso
-- Filtros por tipo de ingreso
+- Múltiples tipos de ingresos (Principal, Secundario, Inversiones, Rentas, etc.)
+- Registro detallado con fecha, descripción y cuenta destino
+- Historial completo filtrable
 
 ### 📋 Gestión de Deudas
 - Registro de deudas con saldo inicial y actual
-- Cálculo automático de meses restantes
-- Barra de progreso de pago
-- Registro de pagos individuales
-- Alertas de vencimiento
+- Cálculo automático de cuotas pendientes
+- Barra de progreso visual
+- Registro individual de pagos
+- Historial de transacciones por deuda
 
-### 🔄 Sincronización Google Sheets
-
-#### Para Conectar:
-1. Ve a **Configuración** → **Conexión Google Sheets**
-2. Ingresa la URL completa de tu hoja de cálculo:
-   ```
-   https://docs.google.com/spreadsheets/d/TU_ID_AQUI/edit
-   ```
-3. Haz clic en "Conectar Hoja"
-4. Prueba la conexión con "Probar Conexión"
-5. Usa "Sincronizar Datos" para cargar datos desde la hoja
-
-#### Estructura de Google Sheets:
-La hoja debe tener las siguientes columnas (sin encabezados):
-```
-ID | Type | Date | Category | Description | Amount | Account
-```
-
-Tipos de transacción:
-- `Ingreso` - para ingresos
-- `Egreso` - para gastos
-- `Deuda` - para deudas
-
-#### Requisitos:
-- La hoja debe estar **compartida públicamente**
-- Formato CSV compatible
-
-### ⚙️ Configuración
-
-#### Gestionar Cuentas
-- Agregar cuentas bancarias, tarjetas de crédito, efectivo
-- Eliminar cuentas no usadas
-
-#### Gestionar Categorías
-- Crear categorías personalizadas
-- Asignar presupuesto mensual por categoría
-- Clasificar como Ingreso o Egreso
-
-#### Metas de Ahorro
+### 🎯 Metas de Ahorro
 - Crear metas con monto objetivo y fecha límite
-- Ver progreso en el dashboard
-- Trackear múltiples metas simultáneamente
+- Depósitos y retiros de metas
+- Seguimiento de progreso
+- Gestión desde cualquier tipo de cuenta
 
-### 📱 Mobile
-- Interfaz completamente responsive
-- Menú colapsable en móvil
-- Navegación intuitiva con cierre automático
+### ⚙️ Configuración Completa
+- **Gestionar Cuentas**: Añadir/eliminar cuentas (Corriente, Tarjeta, Efectivo, Ahorros)
+- **Gestionar Categorías**: Crear categorías personalizadas y asignar presupuestos
+- **Exportar Datos**: Descargar datos en formato Excel
 
-### 💾 Persistencia de Datos
-- **LocalStorage**: Almacenamiento local de datos (por defecto)
-- **Google Sheets**: Sincronización opcional con hojas públicas
-- Datos privados por usuario (URL única en localStorage)
+### 📱 Diseño Responsive
+- Interfaz completamente responsive para móvil, tablet y desktop
+- Menú colapsable con navegación intuitiva
+- Header optimizado para pantallas pequeñas
+- Cierre automático del menú al perder foco
 
-## Tecnología
+## 🏗️ Arquitectura Técnica
 
-- **HTML5**: Estructura semántica
-- **CSS3**: Responsive design, gradientes, animaciones
-- **JavaScript Vanilla**: Sin dependencias externas
+```
+┌─────────────────────────────────────┐
+│         HTML5 + CSS3                 │
+│    Interface Responsiva              │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│      JavaScript Vanilla              │
+│   - app.js (3000+ líneas)           │
+│   - Lógica de negocio pura          │
+│   - Sin frameworks externos         │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│    LocalStorage (Almacenamiento)    │
+│   - Datos persistentes por usuario  │
+│   - Backup/Restore opcional         │
+└─────────────────────────────────────┘
+```
+
+### Dependencias Externas
 - **Chart.js**: Gráficos dinámicos
-- **Papa Parse**: Parseo de CSV desde Google Sheets
-- **LocalStorage**: Almacenamiento de configuración
+- **Papa Parse**: Parseo de CSV (opcional)
 
-## Uso
+## 🚀 Inicio Rápido
 
-1. Abre `index.html` en un navegador moderno
-2. Comienza a registrar gastos e ingresos
-3. Configura tus cuentas y categorías
-4. (Opcional) Conecta una hoja de Google Sheets para sincronización
+### Instalación
+```bash
+# 1. Clonar o descargar el proyecto
+git clone https://github.com/stivenarz/personal_finances.git
+cd personal_finances
 
-## Notas Importantes
+# 2. Abrir en navegador (requiere servidor local)
+python3 -m http.server 8000
+# O usar cualquier servidor local
 
-- Los datos se guardan automáticamente en LocalStorage
-- Para usar Google Sheets, la hoja DEBE estar compartida públicamente
-- La URL de conexión a Google Sheets se guarda en localStorage
-- La app es multiusuario: cada URL de hoja tiene sus propios datos
-- Los cambios se sincronizan al hacer clic en "Sincronizar Datos"
+# 3. Navegar a
+http://localhost:8000
+```
 
-## Próximas Mejoras (Sugeridas)
+### Primer Uso
+1. Abre la aplicación en tu navegador
+2. Crea cuentas bancarias en Configuración
+3. Define categorías de gastos (Alimentación, Transporte, etc.)
+4. Comienza a registrar transacciones
+5. Visualiza tus datos en el Dashboard
 
-- [ ] Exportar datos a CSV/Excel
-- [ ] Gráficos comparativos mensuales/anuales
-- [ ] Predicciones de presupuesto
-- [ ] Alertas de gastos excesivos
-- [ ] Integración con APIs de bancos reales
-- [ ] App móvil nativa (PWA)
+## 💾 Almacenamiento de Datos
+
+### LocalStorage
+- Todos los datos se guardan automáticamente en localStorage del navegador
+- Ubicación: `window.localStorage['app_offline_data']`
+- Estructura:
+  ```json
+  {
+    "transactions": [],
+    "debts": [],
+    "accounts": [],
+    "categories": [],
+    "goals": [],
+    "debtPayments": []
+  }
+  ```
+
+### Persistencia
+- Los datos persisten entre sesiones
+- Cada navegador/dispositivo tiene su propia copia
+- Recomendado hacer backups periódicos (Exportar)
+
+## 📂 Estructura del Proyecto
+
+```
+personal-finances/
+├── index.html           # Estructura principal de la aplicación
+├── app.js              # Lógica de negocio (3000+ líneas)
+├── styles.css          # Estilos responsive (1000+ líneas)
+├── firebase-guide.html # Guía de Firebase (referencia)
+├── README.md           # Este archivo
+└── .claude/
+    └── launch.json     # Configuración para desarrollo local
+```
+
+## 🔄 Flujo de Datos
+
+### Transacciones
+1. Usuario registra un gasto/ingreso
+2. Sistema crea registro con ID único
+3. Se almacena en localStorage
+4. Dashboard se actualiza automáticamente
+5. Gráficos se recalculan
+
+### Cálculo de KPIs
+- **INGRESOS**: Suma de todos los ingresos del mes
+- **EGRESOS**: Suma de gastos del mes (no incluye abonos a metas)
+- **BALANCE**: INGRESOS - EGRESOS
+- **TASA AHORRO**: (ABONOS A METAS / INGRESOS) * 100
+- **SALDO DISPONIBLE**: Suma de saldos de todas las cuentas
+- **TOTAL AHORROS**: Suma de saldos de metas de ahorro
+
+## 🎨 Temas y Estilos
+
+### Variables CSS Principales
+- Colores de marca: Gradiente azul-morado
+- Responsive breakpoints: 768px (tablet), 480px (mobile)
+- Paleta de colores para transacciones: Verde (Ingreso), Rojo (Egreso), Naranja (Deuda)
+
+### Iconografía
+- Emojis para navegación rápida
+- Códigos de color para tipos de transacción
+- Barras de progreso para metas y deudas
+
+## 🛠️ Desarrollo
+
+### Requisitos
+- Navegador moderno (Chrome, Firefox, Safari, Edge)
+- Servidor local (para desarrollo)
+
+### Servidor de Desarrollo
+```bash
+python3 -m http.server 8000
+# Luego acceder a http://localhost:8000
+```
+
+## 🔒 Seguridad y Privacidad
+
+- **100% Local**: Los datos nunca dejan tu navegador
+- **Sin cuentas**: No requiere registro o login
+- **Privado**: Cada usuario tiene su propia instancia
+- **Sincronización**: Optional con Google Sheets (público)
+
+## 📋 Categorías Estándar
+
+### Gastos (Egresos)
+- Alimentación
+- Transporte
+- Salud
+- Entretenimiento
+- Servicios
+- Otros
+
+### Ingresos
+- Nomina/Salario (Principal)
+- Bonificación/Extra (Secundario)
+- Inversiones/Rentas
+- Otros Ingresos
+
+## 🚀 Mejoras Futuras Sugeridas
+
+### Corto Plazo
+- [ ] Importar datos desde CSV
+- [ ] Más opciones de gráficos (Línea, Comparativa)
+- [ ] Alertas por límite de presupuesto
+- [ ] Notas en transacciones
+
+### Mediano Plazo
+- [ ] Proyecciones de presupuesto
+- [ ] Análisis de tendencias
+- [ ] Categorización automática
+- [ ] Búsqueda avanzada
+- [ ] Filtros más complejos
+
+### Largo Plazo
+- [ ] PWA (Progressive Web App)
 - [ ] Soporte multimoneda
+- [ ] Sincronización en nube (Firebase/Supabase)
+- [ ] App móvil nativa
+- [ ] Integración con APIs bancarias reales
+- [ ] Análisis de patrones de gasto
+
+## 📞 Soporte
+
+### Para Reportar Bugs
+1. Abre DevTools (F12)
+2. Revisa la consola por errores
+3. Reporta con:
+   - Descripción del problema
+   - Pasos para reproducir
+   - Error de consola (si existe)
+   - Navegador y versión
+
+### Para Sugerencias
+- Crea un issue en el repositorio
+- Describe el caso de uso
+- Proporciona ejemplos
+
+## 📄 Licencia
+
+Este proyecto es de código abierto y está disponible bajo licencia MIT.
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor:
+1. Fork el proyecto
+2. Crea una rama para tu feature
+3. Commit con mensajes descriptivos
+4. Push a la rama
+5. Abre un Pull Request
+
+---
+
+**Versión**: 1.0  
+**Última actualización**: 2026-10-06  
+**Estado**: Activo y en desarrollo
