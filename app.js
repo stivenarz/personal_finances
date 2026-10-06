@@ -2446,28 +2446,23 @@ function updateDashboard() {
 
     const balance = totalIncome - totalExpenses;
 
-    // Calculate account balances (separate available from savings) - placed before savingRate
-    const availableBalance = APP.data.accounts
-        .filter(acc => acc.type !== 'Ahorros')
+    // Calculate total account balance (all accounts, regardless of type)
+    const totalAccountBalance = APP.data.accounts
         .reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
-    const savingsBalance = APP.data.accounts
-        .filter(acc => acc.type === 'Ahorros')
-        .reduce((sum, acc) => sum + (acc.balance || 0), 0);
-
-    // Calculate total savings goals
+    // Calculate total savings goals (only metas, not savings accounts)
     const totalSavings = APP.data.goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
 
-    // Saving rate is the percentage of income that went to savings (not the balance)
-    const savingRate = totalIncome > 0 ? ((savingsBalance + totalSavings) / totalIncome) * 100 : 0;
+    // Saving rate is the percentage of income that went to savings goals only
+    const savingRate = totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0;
 
     // Update KPIs
     document.getElementById('kpi-ingresos').textContent = `$${formatNumber(totalIncome)}`;
     document.getElementById('kpi-egresos').textContent = `$${formatNumber(totalExpenses)}`;
     document.getElementById('kpi-balance').textContent = `$${formatNumber(balance)}`;
     document.getElementById('kpi-ahorro').textContent = `${savingRate.toFixed(1)}%`;
-    document.getElementById('kpi-saldo-disponible').textContent = `$${formatNumber(availableBalance)}`;
-    document.getElementById('kpi-total-ahorros').textContent = `$${formatNumber(savingsBalance + totalSavings)}`;
+    document.getElementById('kpi-saldo-disponible').textContent = `$${formatNumber(totalAccountBalance)}`;
+    document.getElementById('kpi-total-ahorros').textContent = `$${formatNumber(totalSavings)}`;
 
     // Update budget comparison
     updateBudgetComparison(monthTransactions);
