@@ -130,7 +130,7 @@ body {
 }
 
 .sidebar-header {
-    padding: 30px 20px;
+    padding: calc(30px + env(safe-area-inset-top)) 20px 30px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     text-align: center;
     display: flex;
