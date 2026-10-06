@@ -268,6 +268,17 @@ function setupMobileMenu() {
             }
         });
     });
+
+    // Close menu when clicking outside of it
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('open') &&
+            !sidebar.contains(e.target) &&
+            !toggle.contains(e.target)) {
+            sidebar.classList.remove('open');
+            toggle.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
 
 function loadDataFromStorage() {
