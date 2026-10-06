@@ -1351,6 +1351,31 @@ window.deleteTransaction = async function(transId) {
     const confirmed = confirm(`¿Eliminar la transacción de ${transaction.type === 'Egreso' ? 'gasto' : 'ingreso'}?`);
     if (!confirmed) return;
 
+    // Revert transaction effects
+    const account = APP.data.accounts.find(a => a.id === transaction.account);
+    if (account) {
+        if (transaction.type === 'Egreso') {
+            // Reverting expense: add money back to account
+            account.balance += transaction.amount;
+        } else if (transaction.type === 'Ingreso') {
+            // Reverting income: subtract money from account
+            account.balance -= transaction.amount;
+        }
+    }
+
+    // Revert savings goal deposits
+    if (transaction.category === 'Retiro de Ahorros' || transaction.description?.startsWith('Abono a meta:')) {
+        const goalMatch = transaction.description?.match(/Viaje|meta/i);
+        if (goalMatch) {
+            const goal = APP.data.goals.find(g =>
+                g.description.toLowerCase().includes(goalMatch[0].toLowerCase())
+            );
+            if (goal) {
+                goal.currentAmount += transaction.amount;
+            }
+        }
+    }
+
     APP.data.transactions = APP.data.transactions.filter(t => t.id !== transId);
     trackDeletion('transactions', transId);
 
@@ -1358,9 +1383,14 @@ window.deleteTransaction = async function(transId) {
     renderExpensesList();
     renderIncomeList();
     renderTransactionsList();
+    renderAccounts();
+    renderAccountsList();
 
     if (APP.isOnline && window.firebaseDB) {
         try {
+            if (account) {
+                await window.firebaseDB.saveData('accounts', account);
+            }
             await window.firebaseDB.deleteData('transactions', transId);
         } catch (err) {
             console.error('Error deleting transaction:', err);
@@ -2569,14 +2599,18 @@ function updateExpensesByCategoryChart(transactions) {
             if (cat) {
                 categoryName = cat.name;
             }
-        } else {
-            // If no explicit category, try to extract from description
-            if (exp.description.startsWith('Pago de deuda:')) {
+        }
+
+        // Also check description for special transaction types
+        if (categoryName === 'Otro' || !exp.category) {
+            if (exp.description && exp.description.includes('Pago de deuda:')) {
                 categoryName = 'Pago de deuda';
-            } else if (exp.description.startsWith('Abono a meta:')) {
+            } else if (exp.description && exp.description.includes('Abono a meta:')) {
                 categoryName = 'Abono a meta';
-            } else if (exp.description.startsWith('Traslado:')) {
+            } else if (exp.description && exp.description.includes('Traslado:')) {
                 categoryName = 'Traslado';
+            } else if (exp.description && exp.description.includes('Retiro de Ahorros:')) {
+                categoryName = 'Retiro de Ahorros';
             }
         }
 
