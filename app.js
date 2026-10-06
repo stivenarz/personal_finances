@@ -128,7 +128,7 @@ function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
-        top: max(20px, calc(20px + env(safe-area-inset-top)));
+        top: calc(30px + env(safe-area-inset-top));
         right: 20px;
         padding: 15px 20px;
         background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#FF9800' : '#2196F3'};
@@ -137,11 +137,31 @@ function showNotification(message, type = 'info') {
         z-index: 10000;
         font-size: 14px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: opacity 0.3s ease;
     `;
     notification.textContent = message;
+
+    // Cerrar notificación al clickear/tocar
+    notification.addEventListener('click', () => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    });
+
+    // Cerrar notificación al tocarla en mobile
+    notification.addEventListener('touchstart', () => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    });
+
     document.body.appendChild(notification);
 
-    setTimeout(() => notification.remove(), 5000);
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 5000);
 }
 
 function updateDatabaseModeStatus() {
