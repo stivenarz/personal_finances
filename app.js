@@ -21,8 +21,6 @@
 const APP = {
     // Mes actual para filtrado de datos
     currentMonth: new Date().toISOString().slice(0, 7),
-    // Estado de conexión
-    isOnline: false,
     // Almacenamiento central de datos
     data: {
         transactions: [],  // Todos los movimientos (ingresos, egresos, abonos, pagos)
@@ -30,7 +28,10 @@ const APP = {
         accounts: [],      // Cuentas bancarias/de efectivo
         categories: [],    // Categorías de gastos e ingresos
         goals: [],         // Metas de ahorro
-        debtPayments: []   // Historial de pagos de deudas
+        debtPayments: [],  // Historial de pagos de deudas
+        recurringExpenses: [], // Gastos fijos con día de pago
+        paymentPlans: [],  // Planes de pago guardados
+        settings: []       // Configuración (doc 'plan': ingresos fijos y frecuencia)
     },
     // Instancias de gráficos (Chart.js)
     charts: {},
@@ -49,7 +50,7 @@ function loadOfflineData() {
     try {
         const offlineData = localStorage.getItem('app_offline_data');
         if (offlineData) {
-            APP.data = JSON.parse(offlineData);
+            APP.data = { ...APP.data, ...JSON.parse(offlineData) };
             // Ensure all accounts have a valid numeric balance property
             if (APP.data.accounts && APP.data.accounts.length > 0) {
                 APP.data.accounts.forEach(acc => {
@@ -79,253 +80,315 @@ function saveOfflineData() {
     }
 }
 
-// ============ DELETED RECORDS TRACKING ============
-function trackDeletion(collectionName, id) {
-    try {
-        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
-        if (!deletedRecords[collectionName]) deletedRecords[collectionName] = {};
+// ============ DATA LAYER ============
+// Única vía para modificar datos: actualiza APP.data + localStorage y, si hay
+// Firebase configurado, escribe en la nube (Firestore guarda los cambios offline).
+const CLOUD = {
+    enabled: false,
+    unsubscribers: [],
+    serverConfirmed: {},
+    pending: false,
+    pendingSince: null,
+    error: null
+};
 
-        deletedRecords[collectionName][id] = {
-            timestamp: Date.now(),
-            deletedAt: new Date().toISOString()
-        };
+const money = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
-        localStorage.setItem('deletedRecords', JSON.stringify(deletedRecords));
-    } catch (error) {
-        console.error('Error tracking deletion:', error);
-    }
+function cloudCall(promise) {
+    promise.catch(error => {
+        console.error('Error de sincronización:', error);
+        CLOUD.error = error;
+        showNotification('⚠️ No se pudo guardar en la nube: ' + error.message, 'warning');
+        updateSyncStatus();
+    });
 }
 
-function isDeletedRecently(collectionName, id) {
-    try {
-        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
-        return deletedRecords[collectionName]?.[id] !== undefined;
-    } catch {
-        return false;
-    }
+function upsertLocal(collectionName, record) {
+    const list = APP.data[collectionName];
+    const index = list.findIndex(item => item.id === record.id);
+    if (index >= 0) list[index] = record;
+    else list.push(record);
 }
 
-function cleanupOldDeletions() {
-    try {
-        const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
-        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+function dbSave(collectionName, record) {
+    upsertLocal(collectionName, record);
+    saveOfflineData();
+    if (CLOUD.enabled) cloudCall(window.firebaseDB.saveRecord(collectionName, record));
+}
 
-        for (const [collection, deletedIds] of Object.entries(deletedRecords)) {
-            for (const [id, record] of Object.entries(deletedIds)) {
-                if (record.timestamp < thirtyDaysAgo) {
-                    delete deletedIds[id];
-                }
-            }
-        }
+function dbPatch(collectionName, id, fields) {
+    const record = APP.data[collectionName].find(item => item.id === id);
+    if (!record) return;
+    Object.assign(record, fields);
+    saveOfflineData();
+    if (CLOUD.enabled) cloudCall(window.firebaseDB.patchRecord(collectionName, id, fields));
+}
 
-        localStorage.setItem('deletedRecords', JSON.stringify(deletedRecords));
-    } catch (error) {
-        console.error('Error cleaning up deletions:', error);
-    }
+function dbDelete(collectionName, id) {
+    APP.data[collectionName] = APP.data[collectionName].filter(item => item.id !== id);
+    saveOfflineData();
+    if (CLOUD.enabled) cloudCall(window.firebaseDB.deleteRecord(collectionName, id));
+}
+
+function dbAdjustBalance(accountId, delta) {
+    const account = APP.data.accounts.find(item => item.id === accountId);
+    if (!account || !delta) return;
+    account.balance = money((account.balance || 0) + delta);
+    saveOfflineData();
+    if (CLOUD.enabled) cloudCall(window.firebaseDB.adjustNumericField('accounts', accountId, 'balance', delta));
+}
+
+function dismissNotification(notification) {
+    if (notification.classList.contains('leaving')) return;
+    notification.classList.add('leaving');
+    setTimeout(() => notification.remove(), 300);
 }
 
 function showNotification(message, type = 'info') {
+    let root = document.getElementById('toast-root');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'toast-root';
+        document.body.appendChild(root);
+    }
+
     const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: calc(30px + env(safe-area-inset-top));
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#FF9800' : '#2196F3'};
-        color: white;
-        border-radius: 4px;
-        z-index: 10000;
-        font-size: 14px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        cursor: pointer;
-        transition: opacity 0.3s ease;
-    `;
+    notification.className = `toast toast-${type}`;
     notification.textContent = message;
-
-    // Cerrar notificación al clickear/tocar
-    notification.addEventListener('click', () => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
+    notification.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        dismissNotification(notification);
     });
 
-    // Cerrar notificación al tocarla en mobile
-    notification.addEventListener('touchstart', () => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    });
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300);
-        }
-    }, 5000);
+    root.appendChild(notification);
+    setTimeout(() => dismissNotification(notification), 5000);
 }
 
-function updateDatabaseModeStatus() {
+const SYNC_LABELS = {
+    local: { text: 'Solo local', cls: 'local' },
+    connecting: { text: 'Conectando…', cls: 'syncing' },
+    syncing: { text: 'Sincronizando…', cls: 'syncing' },
+    synced: { text: 'Conectado y sincronizado', cls: 'synced' },
+    offline: { text: 'Sin conexión · cambios pendientes', cls: 'offline' },
+    error: { text: 'Error de sincronización', cls: 'error' }
+};
+
+function currentSyncState() {
+    if (!CLOUD.enabled) return 'local';
+    if (CLOUD.error) return 'error';
+    if (!navigator.onLine) return 'offline';
+    if (CLOUD.pending && CLOUD.pendingSince && Date.now() - CLOUD.pendingSince > 15000) return 'offline';
+    if (CLOUD.pending) return 'syncing';
+    const allConfirmed = COLLECTION_NAMES.every(name => CLOUD.serverConfirmed[name]);
+    return allConfirmed ? 'synced' : 'connecting';
+}
+
+function updateSyncStatus() {
+    const state = currentSyncState();
+    const { text, cls } = SYNC_LABELS[state];
+
+    document.querySelectorAll('[data-sync-badge]').forEach(badge => {
+        badge.textContent = text;
+        badge.className = `sync-badge sync-${cls}`;
+    });
+
     const statusEl = document.getElementById('db-mode-status');
-    const syncBtn = document.getElementById('sync-data-btn');
-
-    if (!statusEl) return;
-
-    if (APP.isOnline) {
-        statusEl.textContent = '🔵 Usando Firebase (Nube)';
-        if (syncBtn) syncBtn.style.display = 'none';
-    } else {
-        statusEl.textContent = '⚫ Usando Base de Datos Local';
-        if (syncBtn) syncBtn.style.display = 'inline-block';
-    }
+    if (statusEl) statusEl.textContent = text;
 }
 
-function setupDatabaseModeToggle() {
-    const localRadio = document.getElementById('db-mode-local');
-    const firebaseRadio = document.getElementById('db-mode-firebase');
+const COLLECTION_NAMES = ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals', 'recurringExpenses', 'paymentPlans', 'settings'];
+const pendingFlags = {};
 
-    if (!localRadio || !firebaseRadio) return;
+function handleCollectionSnapshot(collectionName, snapshot) {
+    const serverConfirmed = !snapshot.metadata.fromCache;
+    const remoteIds = new Set();
 
-    const savedMode = localStorage.getItem('db_mode_preference');
-    if (savedMode === 'local') {
-        localRadio.checked = true;
-        APP.useFirebasePreference = false;
-    } else if (savedMode === 'firebase') {
-        firebaseRadio.checked = true;
-        APP.useFirebasePreference = true;
-    } else if (window.firebaseDB?.isFirebaseConfigured?.()) {
-        firebaseRadio.checked = true;
-        APP.useFirebasePreference = true;
-    } else {
-        localRadio.checked = true;
-        APP.useFirebasePreference = false;
+    snapshot.docs.forEach(docSnap => {
+        remoteIds.add(docSnap.id);
+        const data = docSnap.data();
+        if (data.deleted === true) {
+            APP.data[collectionName] = APP.data[collectionName].filter(item => item.id !== docSnap.id);
+            return;
+        }
+        const record = { id: docSnap.id, ...normalizeRemote(data) };
+        upsertLocal(collectionName, record);
+    });
+
+    if (serverConfirmed) {
+        CLOUD.serverConfirmed[collectionName] = true;
+        APP.data[collectionName]
+            .filter(item => !remoteIds.has(item.id))
+            .forEach(item => cloudCall(window.firebaseDB.saveRecord(collectionName, item)));
+        migrateLegacyDeletions(collectionName);
     }
 
-    localRadio.addEventListener('change', () => {
-        if (localRadio.checked) {
-            localStorage.setItem('db_mode_preference', 'local');
-            APP.useFirebasePreference = false;
-            location.reload();
-        }
-    });
+    pendingFlags[collectionName] = snapshot.metadata.hasPendingWrites;
+    const wasPending = CLOUD.pending;
+    CLOUD.pending = Object.values(pendingFlags).some(Boolean);
+    if (CLOUD.pending && !wasPending) CLOUD.pendingSince = Date.now();
+    if (!CLOUD.pending) CLOUD.pendingSince = null;
 
-    firebaseRadio.addEventListener('change', () => {
-        if (firebaseRadio.checked) {
-            if (!window.firebaseDB?.isFirebaseConfigured?.()) {
-                showNotification('⚠️ Firebase no está configurado', 'warning');
-                localRadio.checked = true;
-                return;
-            }
-            localStorage.setItem('db_mode_preference', 'firebase');
-            APP.useFirebasePreference = true;
-            location.reload();
-        }
+    saveOfflineData();
+    scheduleRefresh();
+    updateSyncStatus();
+}
+
+function normalizeRemote(data) {
+    const result = {};
+    Object.entries(data).forEach(([key, value]) => {
+        if (key === 'updatedAt' || key === 'deleted') return;
+        result[key] = value && typeof value.toDate === 'function' ? value.toDate().toISOString() : value;
     });
+    return result;
+}
+
+function migrateLegacyDeletions(collectionName) {
+    const legacy = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
+    const ids = Object.keys(legacy[collectionName] || {});
+    if (ids.length === 0) return;
+    ids.forEach(id => cloudCall(window.firebaseDB.deleteRecord(collectionName, id)));
+    delete legacy[collectionName];
+    localStorage.setItem('deletedRecords', JSON.stringify(legacy));
+}
+
+let refreshTimer = null;
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshAllViews, 50);
+}
+
+function refreshAllViews() {
+    renderCategories();
+    renderAccounts();
+    renderAccountsList();
+    renderCategoriesList();
+    renderExpensesList();
+    renderIncomeList();
+    renderTransactionsList();
+    renderDebtsList();
+    renderSavingsGoalsList();
+    updateSavingsKpis();
+    updateDashboard();
+    renderPlanning();
+}
+
+async function initCloud() {
+    const fb = window.firebaseDB;
+    CLOUD.enabled = false;
+    if (!fb.isFirebaseConfigured()) {
+        updateSyncStatus();
+        return;
+    }
+
+    try {
+        fb.initializeFirebase();
+        await fb.ensureSignedIn();
+    } catch (error) {
+        console.error('Firebase error:', error);
+        CLOUD.error = error;
+        showNotification('⚠️ No se pudo conectar con Firebase. Modo local.', 'warning');
+        updateSyncStatus();
+        return;
+    }
+
+    CLOUD.enabled = true;
+    setInterval(updateSyncStatus, 5000);
+    CLOUD.unsubscribers = COLLECTION_NAMES.map(name =>
+        fb.subscribeCollection(
+            name,
+            snapshot => handleCollectionSnapshot(name, snapshot),
+            error => {
+                console.error(`Error escuchando ${name}:`, error);
+                CLOUD.error = error;
+                showNotification(`⚠️ Error de sincronización (${name}): ${error.message}`, 'warning');
+                updateSyncStatus();
+            }
+        )
+    );
+    updateSyncStatus();
+}
+
+async function forceSync() {
+    if (!CLOUD.enabled) {
+        showNotification('⚠️ Configura Firebase en Configuración para sincronizar', 'warning');
+        return;
+    }
+
+    const button = document.getElementById('sync-data-btn');
+    if (button) button.disabled = true;
+    CLOUD.pending = true;
+    updateSyncStatus();
+
+    try {
+        await window.firebaseDB.setNetworkEnabled(false);
+        await window.firebaseDB.setNetworkEnabled(true);
+        await Promise.race([
+            window.firebaseDB.pendingWrites(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
+        ]);
+        CLOUD.error = null;
+        showNotification('✅ Sincronizado con la nube', 'success');
+    } catch {
+        showNotification('⚠️ Sin conexión: los cambios se enviarán al reconectar', 'warning');
+    } finally {
+        if (button) button.disabled = false;
+        updateSyncStatus();
+    }
 }
 
 // ============ INITIALIZATION ============
 async function initApp() {
     const spinner = document.getElementById('loading-spinner');
 
-    await import('./firebase-config.js').then(async (fb) => {
-        window.firebaseDB = fb;
+    const fb = await import('./firebase-config.js?v=3');
+    window.firebaseDB = fb;
 
-        const userPreference = localStorage.getItem('db_mode_preference');
-        const firebaseConfigured = fb.isFirebaseConfigured();
-        const shouldUseFirebase = userPreference === 'firebase' && firebaseConfigured;
-
-        if (shouldUseFirebase) {
-            APP.isOnline = true;
-
-            try {
-                const initialized = fb.initializeFirebase();
-                if (!initialized) {
-                    throw new Error('Failed to initialize Firebase');
-                }
-
-                await fb.initializeAuth();
-                const allData = await fb.loadAllData();
-                APP.data = allData;
-                fixTransactionCategories();
-                renderCategories();
-                renderAccounts();
-                showNotification('🔵 Conectado a Firebase', 'success');
-            } catch (error) {
-                console.error('Firebase error:', error);
-                APP.isOnline = false;
-                loadOfflineData();
-                renderCategories();
-                renderAccounts();
-                showNotification('⚠️ Error conectando a Firebase. Modo offline.', 'warning');
-            }
-        } else {
-            APP.isOnline = false;
-            loadOfflineData();
-            renderCategories();
-            renderAccounts();
-            if (userPreference === 'local') {
-                showNotification('📝 Usando Base de Datos Local', 'info');
-            } else {
-                showNotification('⚠️ Usando Base de Datos Local', 'info');
-            }
-        }
-    });
-
+    loadOfflineData();
     setupEventListeners();
+    setupPlanning();
     setupMobileMenu();
     setupSyncButton();
-    setupDatabaseModeToggle();
-    updateDatabaseModeStatus();
-
-    // Hide spinner after loading
-    if (spinner) {
-        spinner.classList.add('hidden');
-    }
-
     setupFirebaseEventListeners();
     setCurrentMonth();
     showView('dashboard');
-    updateDashboard();
+    refreshAllViews();
+
+    if (spinner) spinner.classList.add('hidden');
+
+    window.addEventListener('online', updateSyncStatus);
+    window.addEventListener('offline', updateSyncStatus);
+
+    await initCloud();
+}
+
+function setMenuOpen(open) {
+    const toggle = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    sidebar.classList.toggle('open', open);
+    overlay?.classList.toggle('open', open);
+    toggle.classList.toggle('hidden', open);
+    toggle.setAttribute('aria-expanded', String(open));
 }
 
 function setupMobileMenu() {
     const toggle = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
     const closeBtn = document.getElementById('sidebar-close');
+    const overlay = document.getElementById('sidebar-overlay');
 
-    toggle?.addEventListener('click', () => {
-        sidebar.classList.add('open');
-        toggle.classList.add('hidden');
-        toggle.setAttribute('aria-expanded', 'true');
-    });
-
-    closeBtn?.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        toggle.classList.remove('hidden');
-        toggle.setAttribute('aria-expanded', 'false');
-    });
+    toggle?.addEventListener('click', () => setMenuOpen(true));
+    closeBtn?.addEventListener('click', () => setMenuOpen(false));
+    overlay?.addEventListener('click', () => setMenuOpen(false));
 
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('open');
-                toggle.classList.remove('hidden');
-                toggle.setAttribute('aria-expanded', 'false');
-            }
+            if (window.innerWidth <= 768) setMenuOpen(false);
         });
     });
 
-    // Close menu when clicking outside of it
-    document.addEventListener('click', (e) => {
-        if (sidebar.classList.contains('open') &&
-            !sidebar.contains(e.target) &&
-            !toggle.contains(e.target)) {
-            sidebar.classList.remove('open');
-            toggle.classList.remove('hidden');
-            toggle.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    // Swipe gestures para abrir/cerrar menú
     let touchStartX = 0;
     let touchStartY = 0;
 
@@ -335,25 +398,14 @@ function setupMobileMenu() {
     }, false);
 
     document.addEventListener('touchend', (e) => {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
 
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-
-        // Asegurar que es más horizontal que vertical (swipe, no scroll)
         if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-            // Swipe desde el borde izquierdo hacia la derecha = abrir menú
             if (touchStartX < 50 && deltaX > 50) {
-                sidebar.classList.add('open');
-                toggle.classList.add('hidden');
-                toggle.setAttribute('aria-expanded', 'true');
-            }
-            // Swipe hacia la izquierda = cerrar menú
-            else if (sidebar.classList.contains('open') && deltaX < -50) {
-                sidebar.classList.remove('open');
-                toggle.classList.remove('hidden');
-                toggle.setAttribute('aria-expanded', 'false');
+                setMenuOpen(true);
+            } else if (sidebar.classList.contains('open') && deltaX < -50) {
+                setMenuOpen(false);
             }
         }
     }, false);
@@ -361,31 +413,6 @@ function setupMobileMenu() {
 
 function loadDataFromStorage() {
     // Los datos se cargan desde Firebase automáticamente en initApp
-}
-
-async function saveDataToFirebase(collectionName, data) {
-    if (!APP.isOnline) {
-        // Modo offline: guardar en localStorage
-        saveOfflineData();
-        return;
-    }
-
-    if (!window.firebaseDB) {
-        console.warn('Firebase no disponible');
-        saveOfflineData();
-        return;
-    }
-
-    try {
-        if (data.id) {
-            await window.firebaseDB.updateData(collectionName, data.id, data);
-        } else {
-            await window.firebaseDB.saveData(collectionName, data);
-        }
-    } catch (error) {
-        console.error('Error guardando en Firebase:', error);
-        saveOfflineData();
-    }
 }
 
 function loadGSheetConfig() {
@@ -534,89 +561,7 @@ function deleteDataFromSheet(sheetName, id) {
 
 // ============ EVENT LISTENERS ============
 function setupSyncButton() {
-    const syncBtn = document.getElementById('sync-data-btn');
-    if (!syncBtn) return;
-
-    syncBtn.addEventListener('click', async () => {
-        if (!confirm('¿Sincronizar datos bidireccional con Firebase?\n\nEsto enviará/recibirá datos de la nube.')) {
-            return;
-        }
-
-        syncBtn.disabled = true;
-        syncBtn.textContent = '⏳ Sincronizando...';
-
-        try {
-            // Verify Firebase is configured
-            if (!window.firebaseDB.isFirebaseConfigured()) {
-                throw new Error('Firebase no está configurado');
-            }
-
-            // Initialize Firebase
-            const initialized = window.firebaseDB.initializeFirebase();
-            if (!initialized) {
-                throw new Error('No se pudo inicializar Firebase');
-            }
-
-            // Initialize authentication
-            await window.firebaseDB.initializeAuth();
-
-            const collections = ['accounts', 'categories', 'transactions', 'debts', 'debtPayments', 'goals'];
-            const deletedRecords = JSON.parse(localStorage.getItem('deletedRecords') || '{}');
-
-            // Step 1: Delete records from Firebase that were deleted locally
-            for (const collectionName of collections) {
-                const deletedIds = deletedRecords[collectionName] || {};
-                for (const id of Object.keys(deletedIds)) {
-                    try {
-                        await window.firebaseDB.deleteData(collectionName, id);
-                    } catch (err) {
-                    }
-                }
-            }
-
-            // Step 2: Upload local data to Firebase (except deleted items)
-            for (const collectionName of collections) {
-                const items = APP.data[collectionName] || [];
-                for (const item of items) {
-                    if (item.id && !isDeletedRecently(collectionName, item.id)) {
-                        await window.firebaseDB.saveData(collectionName, item);
-                    }
-                }
-            }
-
-            // Step 3: Download new data from Firebase
-            const firebaseData = await window.firebaseDB.loadAllData();
-            for (const [collectionName, items] of Object.entries(firebaseData)) {
-                for (const remoteItem of items) {
-                    if (!isDeletedRecently(collectionName, remoteItem.id)) {
-                        const exists = APP.data[collectionName]?.find(i => i.id === remoteItem.id);
-                        if (!exists) {
-                            APP.data[collectionName].push(remoteItem);
-                        }
-                    }
-                }
-            }
-
-            // Clean up old deletion records
-            cleanupOldDeletions();
-            saveOfflineData();
-
-            showNotification('✅ Sincronización bidireccional completada', 'success');
-            syncBtn.textContent = '🔄 Sincronizar';
-            syncBtn.style.display = 'none';
-            APP.isOnline = true;
-            updateDatabaseModeStatus();
-            updateDashboard();
-            renderTransactionsList();
-            renderDebtsList();
-        } catch (error) {
-            console.error('Sync error:', error);
-            showNotification('❌ Error: ' + error.message, 'warning');
-            syncBtn.textContent = '🔄 Sincronizar';
-        } finally {
-            syncBtn.disabled = false;
-        }
-    });
+    document.getElementById('sync-data-btn')?.addEventListener('click', forceSync);
 }
 
 function getMoneyValue(value) {
@@ -644,6 +589,7 @@ function setupEventListeners() {
         APP.currentMonth = e.target.value;
         updateDashboard();
         renderTransactionsList();
+        renderPlanning();
     });
 
     // Forms
@@ -785,18 +731,7 @@ function fixTransactionCategories() {
         }
     });
 
-    // Sync updated data to Firebase if online
-    if (updated && APP.isOnline && window.firebaseDB) {
-        APP.data.transactions.forEach(trans => {
-            if (trans.category === 'Deuda' || trans.category === 'Ahorros' || trans.category === 'Traslado') {
-                window.firebaseDB.updateData('transactions', trans.id, { category: trans.category }).catch(err =>
-                    console.error('Error updating transaction:', err)
-                );
-            }
-        });
-    } else if (updated) {
-        saveOfflineData();
-    }
+    if (updated) saveOfflineData();
 }
 
 // ============ VIEW MANAGEMENT ============
@@ -814,7 +749,8 @@ function showView(viewName) {
         deudas: 'Deudas',
         ahorros: 'Ahorros',
         transacciones: 'Transacciones',
-        configuracion: 'Configuración'
+        configuracion: 'Configuración',
+        planificacion: 'Planificación'
     };
     document.getElementById('view-title').textContent = titles[viewName];
 
@@ -832,6 +768,8 @@ function showView(viewName) {
     } else if (viewName === 'configuracion') {
         renderAccountsList();
         renderCategoriesList();
+    } else if (viewName === 'planificacion') {
+        renderPlanning();
     }
 }
 
@@ -880,19 +818,8 @@ function handleAddExpense(e) {
         timestamp: Date.now()
     };
 
-    APP.data.transactions.push(expense);
-    account.balance -= amount;
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('transactions', expense).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-        window.firebaseDB.updateData('accounts', accountId, { balance: account.balance }).catch(err =>
-            console.error('Error actualizando cuenta:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('transactions', expense);
+    dbAdjustBalance(accountId, -amount);
 
     e.target.reset();
     document.getElementById('gasto-fecha').valueAsDate = new Date();
@@ -946,7 +873,10 @@ function renderExpensesList() {
                 <div class="transaction-desc">${exp.description || 'Sin descripción'}</div>
                 <div class="transaction-category">${categoryName}</div>
                 <div class="transaction-amount negativo">-$${formatNumber(exp.amount)}</div>
-                <button class="btn btn-danger" onclick="deleteTransaction('${exp.id}')">Eliminar</button>
+                <div class="row-actions">
+                    <button class="btn btn-secondary" onclick="editTransaction('${exp.id}')">Editar</button>
+                    <button class="btn btn-danger" onclick="deleteTransaction('${exp.id}')">Eliminar</button>
+                </div>
             </div>
         `;
     }).join('');
@@ -998,19 +928,8 @@ function handleAddIncome(e) {
         timestamp: Date.now()
     };
 
-    APP.data.transactions.push(income);
-    account.balance += amount;
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('transactions', income).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-        window.firebaseDB.updateData('accounts', accountId, { balance: account.balance }).catch(err =>
-            console.error('Error actualizando cuenta:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('transactions', income);
+    dbAdjustBalance(accountId, amount);
 
     e.target.reset();
     document.getElementById('ingreso-fecha').valueAsDate = new Date();
@@ -1045,7 +964,10 @@ function renderIncomeList() {
                 <div class="transaction-desc">${inc.description}</div>
                 <div class="transaction-category">${inc.incomeType} • ${account?.name || 'N/A'}</div>
                 <div class="transaction-amount positivo">+$${formatNumber(inc.amount)}</div>
-                <button class="btn btn-danger" onclick="deleteTransaction('${inc.id}')">Eliminar</button>
+                <div class="row-actions">
+                    <button class="btn btn-secondary" onclick="editTransaction('${inc.id}')">Editar</button>
+                    <button class="btn btn-danger" onclick="deleteTransaction('${inc.id}')">Eliminar</button>
+                </div>
             </div>
         `;
     }).join('');
@@ -1133,15 +1055,7 @@ function handleAddDebt(e) {
         startDate: new Date().toISOString().split('T')[0]
     };
 
-    APP.data.debts.push(debt);
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('debts', debt).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('debts', debt);
 
     e.target.reset();
     updateDashboard();
@@ -1200,6 +1114,7 @@ function renderDebtsList() {
 
                 <div class="debt-actions">
                     <button class="btn btn-primary" onclick="registerDebtPayment('${debt.id}')">Registrar Pago</button>
+                    <button class="btn btn-secondary" onclick="editDebt('${debt.id}')">Editar</button>
                     <button class="btn btn-danger" onclick="deleteDebt('${debt.id}')">Eliminar</button>
                 </div>
             </div>
@@ -1277,10 +1192,16 @@ window.showPaymentModal = function(debtId) {
     amountInput.focus();
     amountInput.select();
 
-    document.getElementById('confirmPayment').addEventListener('click', async () => {
+    document.getElementById('confirmPayment').addEventListener('click', () => {
         const amount = parseFloat(amountInput.value);
         const accountId = accountSelect.value;
         modal.remove();
+
+        const current = APP.data.debts.find(d => d.id === debtId);
+        if (!current) {
+            showNotification('❌ Deuda no encontrada', 'error');
+            return;
+        }
 
         if (!accountId) {
             showNotification('❌ Selecciona una cuenta', 'error');
@@ -1292,7 +1213,7 @@ window.showPaymentModal = function(debtId) {
             return;
         }
 
-        if (amount > debt.currentBalance) {
+        if (amount > current.currentBalance) {
             showNotification('❌ El monto no puede exceder el saldo actual', 'error');
             return;
         }
@@ -1308,79 +1229,52 @@ window.showPaymentModal = function(debtId) {
             return;
         }
 
-        // Update debt
-        debt.currentBalance -= amount;
-        if (debt.currentBalance <= 0) {
-            debt.currentBalance = 0;
-        }
+        const newBalance = money(Math.max(0, current.currentBalance - amount));
+        const debtFields = { currentBalance: newBalance };
 
-        // Recalculate monthly payment and next payment date if interest rate and term months are set
-        if (debt.interestRate > 0 && debt.termMonths > 0 && debt.currentBalance > 0) {
-            const remainingMonths = Math.ceil((debt.currentBalance / debt.monthlyPayment) * 12 / debt.termMonths);
+        if (current.interestRate > 0 && current.termMonths > 0 && newBalance > 0) {
+            const remainingMonths = Math.ceil((newBalance / current.monthlyPayment) * 12 / current.termMonths);
             if (remainingMonths > 0) {
-                const metrics = calculateDebtMetrics(debt.currentBalance, debt.interestRate, remainingMonths);
-                if (metrics) {
-                    debt.monthlyPayment = metrics.monthlyPayment;
-                }
+                const metrics = calculateDebtMetrics(newBalance, current.interestRate, remainingMonths);
+                if (metrics) debtFields.monthlyPayment = metrics.monthlyPayment;
             }
         }
 
-        // Calculate next payment date based on payment day
-        if (debt.paymentDay) {
+        if (current.paymentDay) {
             const today = new Date();
-            let nextPayment = new Date(today.getFullYear(), today.getMonth(), debt.paymentDay);
-
+            let nextPayment = new Date(today.getFullYear(), today.getMonth(), current.paymentDay);
             if (nextPayment <= today) {
-                nextPayment = new Date(today.getFullYear(), today.getMonth() + 1, debt.paymentDay);
+                nextPayment = new Date(today.getFullYear(), today.getMonth() + 1, current.paymentDay);
             }
-
-            debt.nextPaymentDate = nextPayment.toISOString().split('T')[0];
+            debtFields.nextPaymentDate = nextPayment.toISOString().split('T')[0];
         }
 
-        // Record payment
-        const debtPayment = {
-            id: 'pay-' + Date.now(),
-            debtId: debtId,
-            amount: amount,
-            date: new Date().toISOString().split('T')[0],
-            timestamp: Date.now(),
-            accountId: accountId
-        };
-
-        APP.data.debtPayments.push(debtPayment);
-
-        // Create transaction (Egreso)
+        const today = new Date().toISOString().split('T')[0];
         const transaction = {
             id: 'trans-' + Date.now(),
             type: 'Egreso',
-            date: new Date().toISOString().split('T')[0],
+            date: today,
             category: 'Deuda',
-            description: `Pago de deuda: ${debt.entity || 'Sin nombre'}`,
+            description: `Pago de deuda: ${current.entity || 'Sin nombre'}`,
             amount: amount,
             account: accountId,
             timestamp: Date.now()
         };
 
-        APP.data.transactions.push(transaction);
+        const debtPayment = {
+            id: 'pay-' + Date.now(),
+            debtId: debtId,
+            amount: amount,
+            date: today,
+            timestamp: Date.now(),
+            accountId: accountId,
+            transactionId: transaction.id
+        };
 
-        // Update account balance
-        account.balance -= amount;
-
-        // Save locally
-        saveOfflineData();
-
-        // Sync to Firebase if online
-        if (APP.isOnline && window.firebaseDB) {
-            try {
-                await window.firebaseDB.saveData('debtPayments', debtPayment);
-                await window.firebaseDB.updateData('debts', debtId, { currentBalance: debt.currentBalance });
-                await window.firebaseDB.saveData('transactions', transaction);
-                await window.firebaseDB.updateData('accounts', accountId, { balance: account.balance });
-            } catch (err) {
-                console.error('Error saving to Firebase:', err);
-                showNotification('⚠️ Sincronización parcial: datos guardados localmente', 'warning');
-            }
-        }
+        dbPatch('debts', debtId, debtFields);
+        dbSave('debtPayments', debtPayment);
+        dbSave('transactions', transaction);
+        dbAdjustBalance(accountId, -amount);
 
         updateDashboard();
         renderDebtsList();
@@ -1409,88 +1303,134 @@ window.deleteDebt = async function(debtId) {
     const confirmed = confirm(`¿Eliminar la deuda "${debt.description || 'Sin nombre'}"?`);
     if (!confirmed) return;
 
-    APP.data.debts = APP.data.debts.filter(d => d.id !== debtId);
-    trackDeletion('debts', debtId);
-
+    dbDelete('debts', debtId);
     updateDashboard();
     renderDebtsList();
-
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            await window.firebaseDB.deleteData('debts', debtId);
-        } catch (err) {
-            console.error('Error deleting debt:', err);
-            APP.data.debts.push(debt);
-            updateDashboard();
-            renderDebtsList();
-            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
 }
 
 // ============ TRANSACTIONS ============
-window.deleteTransaction = async function(transId) {
-    const transaction = APP.data.transactions.find(t => t.id === transId);
-    if (!transaction) return;
+function goalForTransaction(t) {
+    const description = t.description || '';
+    if (t.category === 'Retiro de Ahorros' && description.startsWith('Retiro de ahorros: ')) {
+        const name = description.slice('Retiro de ahorros: '.length);
+        return APP.data.goals.find(g => g.description === name);
+    }
+    if (t.type === 'Ahorro' && description.startsWith('Abono a meta: ')) {
+        const name = description.slice('Abono a meta: '.length);
+        return APP.data.goals.find(g => g.description === name);
+    }
+    return null;
+}
 
-    const confirmed = confirm(`¿Eliminar la transacción de ${transaction.type === 'Egreso' ? 'gasto' : 'ingreso'}?`);
-    if (!confirmed) return;
+function transferAccounts(t) {
+    const origin = APP.data.accounts.find(a => a.id === t.account);
+    let destination = t.toAccount ? APP.data.accounts.find(a => a.id === t.toAccount) : null;
+    if (!destination) {
+        const match = (t.description || '').match(/^Transferencia de (.+?) a (.+?)(:|$)/);
+        if (match) destination = APP.data.accounts.find(a => a.name === match[2]);
+    }
+    return { origin, destination };
+}
 
-    // Revert transaction effects
-    const account = APP.data.accounts.find(a => a.id === transaction.account);
-    if (account) {
-        if (transaction.type === 'Egreso') {
-            // Reverting expense: add money back to account
-            account.balance += transaction.amount;
-        } else if (transaction.type === 'Ingreso') {
-            // Reverting income: subtract money from account
-            account.balance -= transaction.amount;
-        }
+function debtPaymentForTransaction(t) {
+    const linked = APP.data.debtPayments.find(p => p.transactionId === t.id);
+    if (linked) return linked;
+    if (t.type === 'Egreso' && t.category === 'Deuda') {
+        return APP.data.debtPayments.find(p =>
+            p.amount === t.amount && p.date === t.date && p.accountId === t.account
+        );
+    }
+    return null;
+}
+
+function undoTransactionEffects(t) {
+    const amount = t.amount || 0;
+
+    if (t.type === 'Egreso' || t.type === 'Ahorro') {
+        dbAdjustBalance(t.account, amount);
+    } else if (t.type === 'Ingreso') {
+        dbAdjustBalance(t.account, -amount);
+    } else if (t.type === 'Transferencia') {
+        const { origin, destination } = transferAccounts(t);
+        if (origin) dbAdjustBalance(origin.id, amount);
+        if (destination) dbAdjustBalance(destination.id, -amount);
     }
 
-    // Revert savings goal deposits
-    if (transaction.category === 'Retiro de Ahorros' || transaction.description?.startsWith('Abono a meta:')) {
-        const goalMatch = transaction.description?.match(/Viaje|meta/i);
-        if (goalMatch) {
-            const goal = APP.data.goals.find(g =>
-                g.description.toLowerCase().includes(goalMatch[0].toLowerCase())
-            );
-            if (goal) {
-                goal.currentAmount += transaction.amount;
-            }
-        }
+    const goal = goalForTransaction(t);
+    if (goal) {
+        const sign = t.type === 'Ahorro' ? -1 : 1;
+        dbPatch('goals', goal.id, { currentAmount: money(goal.currentAmount + sign * amount) });
     }
 
-    APP.data.transactions = APP.data.transactions.filter(t => t.id !== transId);
-    trackDeletion('transactions', transId);
+    const payment = debtPaymentForTransaction(t);
+    if (payment) {
+        const debt = APP.data.debts.find(d => d.id === payment.debtId);
+        if (debt) dbPatch('debts', debt.id, { currentBalance: money(debt.currentBalance + payment.amount) });
+        dbDelete('debtPayments', payment.id);
+    }
+}
 
+function applyTransactionEffects(t) {
+    const amount = t.amount || 0;
+
+    if (t.type === 'Egreso') {
+        dbAdjustBalance(t.account, -amount);
+    } else if (t.type === 'Ingreso') {
+        dbAdjustBalance(t.account, amount);
+    } else if (t.type === 'Ahorro') {
+        dbAdjustBalance(t.account, -amount);
+    } else if (t.type === 'Transferencia') {
+        const { origin, destination } = transferAccounts(t);
+        if (origin) dbAdjustBalance(origin.id, -amount);
+        if (destination) dbAdjustBalance(destination.id, amount);
+    }
+
+    const goal = goalForTransaction(t);
+    if (goal) {
+        const sign = t.type === 'Ahorro' ? 1 : -1;
+        dbPatch('goals', goal.id, { currentAmount: money(goal.currentAmount + sign * amount) });
+    }
+
+    if (t.type === 'Egreso' && t.category === 'Deuda') {
+        const entity = (t.description || '').replace(/^Pago de deuda: /, '');
+        const debt = APP.data.debts.find(d => (d.entity || 'Sin nombre') === entity);
+        if (debt) {
+            dbPatch('debts', debt.id, { currentBalance: money(Math.max(0, debt.currentBalance - amount)) });
+            dbSave('debtPayments', {
+                id: 'pay-' + Date.now(),
+                debtId: debt.id,
+                amount: amount,
+                date: t.date,
+                timestamp: Date.now(),
+                accountId: t.account,
+                transactionId: t.id
+            });
+        }
+    }
+}
+
+function refreshMovementViews() {
     updateDashboard();
     renderExpensesList();
     renderIncomeList();
     renderTransactionsList();
     renderAccounts();
     renderAccountsList();
+    renderDebtsList();
+    renderSavingsGoalsList();
+    updateSavingsKpis();
+}
 
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            if (account) {
-                await window.firebaseDB.saveData('accounts', account);
-            }
-            await window.firebaseDB.deleteData('transactions', transId);
-        } catch (err) {
-            console.error('Error deleting transaction:', err);
-            APP.data.transactions.push(transaction);
-            updateDashboard();
-            renderExpensesList();
-            renderIncomeList();
-            renderTransactionsList();
-            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
+window.deleteTransaction = function(transId) {
+    const transaction = APP.data.transactions.find(t => t.id === transId);
+    if (!transaction) return;
+
+    const confirmed = confirm(`¿Eliminar la transacción de ${transaction.type === 'Egreso' ? 'gasto' : 'ingreso'}?`);
+    if (!confirmed) return;
+
+    undoTransactionEffects(transaction);
+    dbDelete('transactions', transId);
+    refreshMovementViews();
 }
 
 function renderTransactionsList() {
@@ -1534,7 +1474,10 @@ function renderTransactionsList() {
                 <div style="font-weight: 600; color: ${isExpense ? 'var(--danger)' : 'var(--secondary)'};">
                     ${isExpense ? '-' : '+'}$${formatNumber(t.amount)}
                 </div>
-                <button class="btn btn-danger" onclick="deleteTransaction('${t.id}')">Eliminar</button>
+                <div class="row-actions">
+                    <button class="btn btn-secondary" onclick="editTransaction('${t.id}')">Editar</button>
+                    <button class="btn btn-danger" onclick="deleteTransaction('${t.id}')">Eliminar</button>
+                </div>
             </div>
         `;
     }).join('');
@@ -1552,6 +1495,633 @@ function renderTransactionsList() {
     accountSelect.value = selectedValue;
 }
 
+// ============ EDICIÓN ============
+function openEditModal({ title, note, fields, onSave }) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="${title}">
+            <h2>${title}</h2>
+            ${note ? `<p class="modal-note">${note}</p>` : ''}
+            <form class="modal-form">
+                ${fields.map(field => renderModalField(field)).join('')}
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    <button type="button" class="btn btn-secondary" data-cancel>Cancelar</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const form = overlay.querySelector('.modal-form');
+    const close = () => overlay.remove();
+    overlay.querySelector('[data-cancel]').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close();
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const values = {};
+        fields.forEach(field => {
+            const raw = form.elements[field.name].value;
+            values[field.name] = field.type === 'number' ? Number(raw) : raw;
+        });
+        const error = onSave(values);
+        if (error) {
+            showNotification(error, 'error');
+            return;
+        }
+        close();
+        showNotification('✅ Cambios guardados', 'success');
+    });
+}
+
+function renderModalField(field) {
+    const id = `modal-${field.name}`;
+    const label = `<label for="${id}">${field.label}</label>`;
+    if (field.type === 'select') {
+        const options = field.options.map(opt =>
+            `<option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+        return `<div class="modal-field">${label}<select id="${id}" name="${field.name}" ${field.disabled ? 'disabled' : ''}>${options}</select></div>`;
+    }
+    const attrs = field.type === 'number'
+        ? 'type="number" step="0.01" min="0"'
+        : `type="${field.type || 'text'}"`;
+    return `<div class="modal-field">${label}<input id="${id}" name="${field.name}" ${attrs} value="${field.value ?? ''}" ${field.disabled ? 'disabled' : ''} required></div>`;
+}
+
+function optionsFromSelect(selectId, includeEmpty = false) {
+    return [...document.getElementById(selectId).options]
+        .filter(o => includeEmpty || o.value)
+        .map(o => ({ value: o.value, label: o.textContent }));
+}
+
+function validPositiveAmount(value) {
+    return Number.isFinite(value) && value > 0;
+}
+
+window.editTransaction = function(transId) {
+    const t = APP.data.transactions.find(item => item.id === transId);
+    if (!t) return;
+
+    const accountOptions = APP.data.accounts.map(a => ({ value: a.id, label: a.name }));
+    const dateField = { name: 'date', label: 'Fecha', type: 'date', value: t.date };
+    const descriptionField = (locked) => ({
+        name: 'description', label: 'Descripción', type: 'text',
+        value: t.description || t.incomeType || '', disabled: locked
+    });
+    const accountField = (locked) => ({
+        name: 'account', label: 'Cuenta', type: 'select', value: t.account,
+        options: accountOptions, disabled: locked
+    });
+    const amountField = (locked) => ({
+        name: 'amount', label: 'Monto', type: 'number', value: t.amount, disabled: locked
+    });
+
+    let fields;
+    let note = '';
+    const isDebtPayment = t.type === 'Egreso' && t.category === 'Deuda';
+    const isGoalMovement = t.type === 'Ahorro' || t.category === 'Retiro de Ahorros';
+    const isTransfer = t.type === 'Transferencia';
+
+    if (t.type === 'Egreso' && !isDebtPayment) {
+        const categoryOptions = APP.data.categories
+            .filter(c => c.type === 'Egreso')
+            .map(c => ({ value: c.id, label: c.name }));
+        fields = [
+            dateField,
+            descriptionField(false),
+            amountField(false),
+            { name: 'category', label: 'Categoría', type: 'select', value: t.category, options: categoryOptions },
+            accountField(false)
+        ];
+    } else if (t.type === 'Ingreso' && !isGoalMovement) {
+        fields = [
+            dateField,
+            descriptionField(false),
+            amountField(false),
+            { name: 'incomeType', label: 'Tipo de ingreso', type: 'select', value: t.incomeType, options: optionsFromSelect('ingreso-tipo') },
+            accountField(false)
+        ];
+    } else if (isTransfer) {
+        const editable = !!transferAccounts(t).destination && !!t.toAccount;
+        note = editable ? '' : 'Transferencia anterior: solo se pueden editar la fecha y la descripción.';
+        fields = [dateField, descriptionField(false), amountField(!editable)];
+    } else {
+        note = isGoalMovement
+            ? 'Los movimientos de metas se vinculan por su descripción: solo se pueden cambiar la fecha, el monto y la cuenta.'
+            : 'Los pagos de deuda se vinculan por su descripción: solo se pueden cambiar la fecha, el monto y la cuenta.';
+        fields = [dateField, descriptionField(true), amountField(false), accountField(false)];
+    }
+
+    openEditModal({
+        title: 'Editar movimiento',
+        note,
+        fields,
+        onSave: (values) => {
+            const amount = values.amount ?? t.amount;
+            if (!validPositiveAmount(amount)) return '❌ Ingresa un monto válido';
+
+            const newAccountId = values.account ?? t.account;
+            const newAccount = APP.data.accounts.find(a => a.id === newAccountId);
+            if (!newAccount) return '❌ Cuenta no encontrada';
+
+            if (t.type === 'Egreso') {
+                const available = newAccountId === t.account ? newAccount.balance + t.amount : newAccount.balance;
+                if (available < amount) return `❌ Saldo insuficiente. Disponible: $${formatNumber(available)}`;
+            }
+
+            const next = { ...t, ...values, amount, account: newAccountId };
+
+            const patch = { date: next.date, amount: next.amount, account: next.account };
+            if (values.description !== undefined && !isDebtPayment && !isGoalMovement) patch.description = values.description;
+            if (values.category !== undefined) patch.category = values.category;
+            if (values.incomeType !== undefined) patch.incomeType = values.incomeType;
+
+            undoTransactionEffects(t);
+            dbPatch('transactions', t.id, patch);
+            applyTransactionEffects({ ...next, ...patch, type: t.type, category: patch.category ?? t.category });
+            refreshMovementViews();
+            return null;
+        }
+    });
+};
+
+window.editDebt = function(debtId) {
+    const debt = APP.data.debts.find(d => d.id === debtId);
+    if (!debt) return;
+
+    openEditModal({
+        title: 'Editar deuda',
+        note: 'El saldo actual cambia con los pagos; aquí puedes corregirlo manualmente.',
+        fields: [
+            { name: 'entity', label: 'Entidad', type: 'text', value: debt.entity },
+            { name: 'holder', label: 'Titular', type: 'text', value: debt.holder },
+            { name: 'currentBalance', label: 'Saldo actual', type: 'number', value: debt.currentBalance },
+            { name: 'monthlyPayment', label: 'Cuota mensual', type: 'number', value: debt.monthlyPayment },
+            { name: 'paymentDay', label: 'Día de pago (1-31)', type: 'number', value: debt.paymentDay }
+        ],
+        onSave: (values) => {
+            if (!values.entity.trim()) return '❌ La entidad no puede estar vacía';
+            if (!validPositiveAmount(values.monthlyPayment)) return '❌ Ingresa una cuota válida';
+            if (!(values.currentBalance >= 0)) return '❌ El saldo no puede ser negativo';
+            const day = Math.min(31, Math.max(1, Math.round(values.paymentDay) || 1));
+            const today = new Date();
+            let next = new Date(today.getFullYear(), today.getMonth(), day);
+            if (next <= today) next = new Date(today.getFullYear(), today.getMonth() + 1, day);
+
+            dbPatch('debts', debtId, {
+                entity: values.entity.trim(),
+                holder: values.holder,
+                currentBalance: money(values.currentBalance),
+                monthlyPayment: money(values.monthlyPayment),
+                paymentDay: day,
+                nextPaymentDate: next.toISOString().split('T')[0]
+            });
+            updateDashboard();
+            renderDebtsList();
+            return null;
+        }
+    });
+};
+
+window.editAccount = function(accountId) {
+    const account = APP.data.accounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    openEditModal({
+        title: 'Editar cuenta',
+        note: 'El saldo cambia con los movimientos; no se edita directamente.',
+        fields: [
+            { name: 'name', label: 'Nombre', type: 'text', value: account.name },
+            { name: 'type', label: 'Tipo', type: 'select', value: account.type, options: optionsFromSelect('cuenta-tipo', true).filter(o => o.value) }
+        ],
+        onSave: (values) => {
+            if (!values.name.trim()) return '❌ El nombre no puede estar vacío';
+            dbPatch('accounts', accountId, { name: values.name.trim(), type: values.type });
+            refreshAllViews();
+            return null;
+        }
+    });
+};
+
+window.editCategory = function(categoryId) {
+    const category = APP.data.categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    openEditModal({
+        title: 'Editar categoría',
+        fields: [
+            { name: 'name', label: 'Nombre', type: 'text', value: category.name },
+            { name: 'type', label: 'Tipo', type: 'select', value: category.type, options: optionsFromSelect('categoria-tipo') },
+            { name: 'budget', label: 'Presupuesto', type: 'number', value: category.budget || 0 }
+        ],
+        onSave: (values) => {
+            if (!values.name.trim()) return '❌ El nombre no puede estar vacío';
+            dbPatch('categories', categoryId, { name: values.name.trim(), type: values.type, budget: money(values.budget) });
+            refreshAllViews();
+            return null;
+        }
+    });
+};
+
+window.editGoal = function(goalId) {
+    const goal = APP.data.goals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    openEditModal({
+        title: 'Editar meta de ahorro',
+        note: 'El monto ahorrado cambia con los abonos y retiros.',
+        fields: [
+            { name: 'description', label: 'Descripción', type: 'text', value: goal.description },
+            { name: 'targetAmount', label: 'Monto objetivo', type: 'number', value: goal.targetAmount },
+            { name: 'deadline', label: 'Fecha límite', type: 'date', value: goal.deadline }
+        ],
+        onSave: (values) => {
+            if (!values.description.trim()) return '❌ La descripción no puede estar vacía';
+            if (!validPositiveAmount(values.targetAmount)) return '❌ Ingresa un monto objetivo válido';
+            const oldName = goal.description;
+            const newName = values.description.trim();
+            dbPatch('goals', goalId, { description: newName, targetAmount: money(values.targetAmount), deadline: values.deadline });
+            if (oldName !== newName) {
+                APP.data.transactions
+                    .filter(t => t.description === `Abono a meta: ${oldName}` || t.description === `Retiro de ahorros: ${oldName}`)
+                    .forEach(t => {
+                        const prefix = t.description.startsWith('Abono a meta: ') ? 'Abono a meta: ' : 'Retiro de ahorros: ';
+                        dbPatch('transactions', t.id, { description: prefix + newName });
+                    });
+            }
+            refreshAllViews();
+            return null;
+        }
+    });
+};
+
+// ============ PLANIFICACIÓN ============
+const PLAN_UI = { selectedPlanId: '', draft: {} };
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
+}
+
+function getPlanSettings() {
+    const saved = APP.data.settings.find(s => s.id === 'plan') || {};
+    return { frecuencia: 'mensual', diaCobro1: 1, diaCobro2: 15, ingresosFijos: 0, ...saved };
+}
+
+function daysInMonth(ym) {
+    const [year, month] = ym.split('-').map(Number);
+    return new Date(year, month, 0).getDate();
+}
+
+function clampDay(day, ym) {
+    return Math.min(daysInMonth(ym), Math.max(1, Math.round(Number(day)) || 1));
+}
+
+function projectedIncomes(ym) {
+    const settings = getPlanSettings();
+    const total = Number(settings.ingresosFijos) || 0;
+    if (total <= 0) return [];
+
+    if (settings.frecuencia === 'quincenal') {
+        const first = money(total / 2);
+        return [
+            { key: 'ingreso:1', day: clampDay(settings.diaCobro1, ym), amount: first, label: 'Ingreso quincena 1', kind: 'ingreso' },
+            { key: 'ingreso:2', day: clampDay(settings.diaCobro2, ym), amount: money(total - first), label: 'Ingreso quincena 2', kind: 'ingreso' }
+        ];
+    }
+    return [{ key: 'ingreso:1', day: clampDay(settings.diaCobro1, ym), amount: money(total), label: 'Ingreso mensual', kind: 'ingreso' }];
+}
+
+function plannedObligations() {
+    const debts = APP.data.debts
+        .filter(d => d.currentBalance > 0)
+        .map(d => ({
+            key: 'debt:' + d.id,
+            label: `Deuda: ${d.entity || 'Sin nombre'}`,
+            amount: money(d.monthlyPayment),
+            day: d.paymentDay || 1,
+            kind: 'egreso'
+        }));
+    const fixed = APP.data.recurringExpenses.map(r => ({
+        key: 'rec:' + r.id,
+        label: r.name,
+        amount: money(r.amount),
+        day: r.day,
+        kind: 'egreso'
+    }));
+    return [...debts, ...fixed];
+}
+
+function planningStartBalance() {
+    return money(APP.data.accounts
+        .filter(a => a.type !== 'Ahorros')
+        .reduce((sum, a) => sum + (a.balance || 0), 0));
+}
+
+function simulatePlan(ym, overrides) {
+    const incomes = projectedIncomes(ym);
+    const obligations = plannedObligations();
+    const events = [
+        ...incomes,
+        ...obligations.map(o => ({ ...o, day: clampDay(overrides[o.key] ?? o.day, ym) }))
+    ].sort((a, b) => a.day - b.day || (a.kind === 'ingreso' ? -1 : 1));
+
+    const startBalance = planningStartBalance();
+    let balance = startBalance;
+    let minBalance = startBalance;
+    let minDay = 0;
+    const rows = events.map(event => {
+        balance = money(balance + (event.kind === 'ingreso' ? event.amount : -event.amount));
+        if (balance < minBalance) {
+            minBalance = balance;
+            minDay = event.day;
+        }
+        return { ...event, balance };
+    });
+
+    const totalIncome = money(incomes.reduce((sum, i) => sum + i.amount, 0));
+    const totalOut = money(obligations.reduce((sum, o) => sum + o.amount, 0));
+    return {
+        rows,
+        startBalance,
+        minBalance,
+        minDay,
+        totalIncome,
+        totalOut,
+        margin: money(totalIncome - totalOut)
+    };
+}
+
+function realIncomeThisMonth(ym) {
+    return money(APP.data.transactions
+        .filter(t => t.type === 'Ingreso' && t.category !== 'Retiro de Ahorros' && (t.date || '').startsWith(ym))
+        .reduce((sum, t) => sum + (t.amount || 0), 0));
+}
+
+function renderPlanning() {
+    const ym = APP.currentMonth;
+    const settings = getPlanSettings();
+
+    const form = document.getElementById('form-plan-ingresos');
+    if (form && !form.contains(document.activeElement)) {
+        document.getElementById('plan-ingresos-fijos').value = settings.ingresosFijos || '';
+        document.getElementById('plan-frecuencia').value = settings.frecuencia;
+        document.getElementById('plan-dia-1').value = settings.diaCobro1;
+        document.getElementById('plan-dia-2').value = settings.diaCobro2;
+        document.getElementById('plan-dia-2-wrap').classList.toggle('hidden', settings.frecuencia !== 'quincenal');
+    }
+
+    renderFixedExpensesList();
+    renderPlanSelector();
+
+    const selected = simulatePlan(ym, PLAN_UI.draft);
+    const base = simulatePlan(ym, {});
+    renderPlanKpis(selected, base, ym);
+    renderPlanObligations(ym);
+    renderPlanCalendar(selected);
+}
+
+function renderFixedExpensesList() {
+    const container = document.getElementById('list-gastos-fijos');
+    if (!container) return;
+    if (APP.data.recurringExpenses.length === 0) {
+        container.innerHTML = '<p class="plan-empty">No hay gastos fijos registrados</p>';
+        return;
+    }
+    container.innerHTML = APP.data.recurringExpenses.map(r => `
+        <div class="plan-item">
+            <div>
+                <strong>${escapeHtml(r.name)}</strong>
+                <div class="plan-item-meta">Día ${r.day} · $${formatNumber(r.amount)}</div>
+            </div>
+            <div class="plan-item-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editRecurring('${r.id}')">Editar</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteRecurring('${r.id}')">Eliminar</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderPlanSelector() {
+    const select = document.getElementById('plan-selector');
+    if (!select) return;
+
+    if (PLAN_UI.selectedPlanId && !APP.data.paymentPlans.some(p => p.id === PLAN_UI.selectedPlanId)) {
+        PLAN_UI.selectedPlanId = '';
+        PLAN_UI.draft = {};
+    }
+
+    const plans = [...APP.data.paymentPlans].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    select.innerHTML = '<option value="">Plan base (días actuales)</option>' +
+        plans.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    select.value = PLAN_UI.selectedPlanId;
+
+    const hasSelection = !!PLAN_UI.selectedPlanId;
+    document.getElementById('plan-update').disabled = !hasSelection;
+    document.getElementById('plan-delete').disabled = !hasSelection;
+}
+
+function renderPlanKpis(selected, base, ym) {
+    const container = document.getElementById('plan-kpis');
+    const alerts = document.getElementById('plan-alerts');
+    const realIncome = realIncomeThisMonth(ym);
+
+    container.innerHTML = `
+        <div class="plan-kpi"><span>Ingresos proyectados</span><strong>$${formatNumber(selected.totalIncome)}</strong></div>
+        <div class="plan-kpi"><span>Obligaciones del mes</span><strong>$${formatNumber(selected.totalOut)}</strong></div>
+        <div class="plan-kpi"><span>Margen</span><strong class="${selected.margin < 0 ? 'neg' : 'pos'}">$${formatNumber(selected.margin)}</strong></div>
+        <div class="plan-kpi"><span>Saldo mínimo</span><strong class="${selected.minBalance < 0 ? 'neg' : ''}">$${formatNumber(selected.minBalance)}${selected.minDay ? ` (día ${selected.minDay})` : ''}</strong></div>
+        <div class="plan-kpi"><span>Ingreso real registrado</span><strong>$${formatNumber(realIncome)}</strong></div>
+    `;
+
+    const messages = [];
+    if (selected.totalIncome === 0) {
+        messages.push('<div class="plan-note">Configura tus ingresos fijos del mes para ver el análisis.</div>');
+    }
+    if (selected.margin < 0) {
+        messages.push('<div class="plan-alert">⚠️ Las obligaciones del mes superan los ingresos fijos.</div>');
+    }
+    if (selected.minBalance < 0) {
+        messages.push(`<div class="plan-alert">⚠️ Con este plan el saldo baja a $${formatNumber(selected.minBalance)} el día ${selected.minDay}.</div>`);
+    } else if (selected.totalIncome > 0) {
+        messages.push('<div class="plan-ok">✅ El plan mantiene el saldo en positivo durante el mes.</div>');
+    }
+    if (PLAN_UI.selectedPlanId) {
+        messages.push(`<div class="plan-note">Plan base: saldo mínimo $${formatNumber(base.minBalance)}${base.minDay ? ` (día ${base.minDay})` : ''}.</div>`);
+    }
+    alerts.innerHTML = messages.join('');
+}
+
+function renderPlanObligations(ym) {
+    const container = document.getElementById('plan-obligations');
+    const obligations = plannedObligations();
+    if (obligations.length === 0) {
+        container.innerHTML = '<p class="plan-empty">No hay obligaciones: agrega deudas o gastos fijos.</p>';
+        return;
+    }
+    const max = daysInMonth(ym);
+    const dayOptions = (selectedDay) => Array.from({ length: max }, (_, i) => i + 1)
+        .map(d => `<option value="${d}" ${d === selectedDay ? 'selected' : ''}>${d}</option>`).join('');
+
+    container.innerHTML = obligations.map(o => {
+        const day = clampDay(PLAN_UI.draft[o.key] ?? o.day, ym);
+        return `
+            <div class="plan-item">
+                <div>
+                    <strong>${escapeHtml(o.label)}</strong>
+                    <div class="plan-item-meta">$${formatNumber(o.amount)} al mes</div>
+                </div>
+                <label class="plan-day-select">Día
+                    <select data-plan-key="${escapeHtml(o.key)}">${dayOptions(day)}</select>
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPlanCalendar(selected) {
+    const container = document.getElementById('plan-calendar');
+    const [year, month] = APP.currentMonth.split('-');
+    const formatDay = (day) => `${String(day).padStart(2, '0')}/${month}/${year}`;
+
+    const body = selected.rows.map(row => `
+        <tr class="${row.balance < 0 ? 'neg-row' : ''}">
+            <td>${formatDay(row.day)}</td>
+            <td>${escapeHtml(row.label)}</td>
+            <td class="${row.kind === 'ingreso' ? 'pos' : 'neg'}">${row.kind === 'ingreso' ? '+' : '−'}$${formatNumber(row.amount)}</td>
+            <td class="${row.balance < 0 ? 'neg' : ''}">$${formatNumber(row.balance)}</td>
+        </tr>
+    `).join('');
+
+    container.innerHTML = `
+        <table class="plan-table">
+            <thead><tr><th>Fecha</th><th>Concepto</th><th>Movimiento</th><th>Saldo</th></tr></thead>
+            <tbody>
+                <tr><td colspan="3">Saldo inicial (cuentas sin ahorro)</td><td>$${formatNumber(selected.startBalance)}</td></tr>
+                ${body}
+            </tbody>
+        </table>
+    `;
+}
+
+function setupPlanning() {
+    document.getElementById('plan-frecuencia').addEventListener('change', (e) => {
+        document.getElementById('plan-dia-2-wrap').classList.toggle('hidden', e.target.value !== 'quincenal');
+    });
+
+    document.getElementById('form-plan-ingresos').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const ingresosFijos = Number(document.getElementById('plan-ingresos-fijos').value);
+        const frecuencia = document.getElementById('plan-frecuencia').value;
+        const diaCobro1 = clampDay(document.getElementById('plan-dia-1').value, APP.currentMonth);
+        const diaCobro2 = clampDay(document.getElementById('plan-dia-2').value, APP.currentMonth);
+
+        if (!(ingresosFijos >= 0)) {
+            showNotification('❌ Ingresa un monto válido', 'error');
+            return;
+        }
+        dbSave('settings', { id: 'plan', ingresosFijos: money(ingresosFijos), frecuencia, diaCobro1, diaCobro2 });
+        renderPlanning();
+        showNotification('✅ Ingresos fijos guardados', 'success');
+    });
+
+    document.getElementById('form-gasto-fijo').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('fijo-nombre').value.trim();
+        const amount = Number(document.getElementById('fijo-monto').value);
+        const day = clampDay(document.getElementById('fijo-dia').value, APP.currentMonth);
+        if (!name || !validPositiveAmount(amount)) {
+            showNotification('❌ Revisa el nombre y el monto', 'error');
+            return;
+        }
+        dbSave('recurringExpenses', { id: 'rec-' + Date.now(), name, amount: money(amount), day, createdAt: Date.now() });
+        e.target.reset();
+        renderPlanning();
+    });
+
+    document.getElementById('plan-obligations').addEventListener('change', (e) => {
+        const key = e.target.dataset.planKey;
+        if (!key) return;
+        PLAN_UI.draft[key] = Number(e.target.value);
+        renderPlanning();
+    });
+
+    document.getElementById('plan-selector').addEventListener('change', (e) => {
+        PLAN_UI.selectedPlanId = e.target.value;
+        const plan = APP.data.paymentPlans.find(p => p.id === e.target.value);
+        PLAN_UI.draft = plan ? { ...(plan.overrides || {}) } : {};
+        renderPlanning();
+    });
+
+    document.getElementById('plan-save').addEventListener('click', () => {
+        const name = document.getElementById('plan-name').value.trim();
+        if (!name) {
+            showNotification('❌ Escribe un nombre para el plan', 'error');
+            return;
+        }
+        const plan = { id: 'plan-' + Date.now(), name, overrides: { ...PLAN_UI.draft }, createdAt: Date.now() };
+        dbSave('paymentPlans', plan);
+        PLAN_UI.selectedPlanId = plan.id;
+        document.getElementById('plan-name').value = '';
+        renderPlanning();
+        showNotification('✅ Plan guardado', 'success');
+    });
+
+    document.getElementById('plan-update').addEventListener('click', () => {
+        if (!PLAN_UI.selectedPlanId) return;
+        dbPatch('paymentPlans', PLAN_UI.selectedPlanId, { overrides: { ...PLAN_UI.draft } });
+        renderPlanning();
+        showNotification('✅ Plan actualizado', 'success');
+    });
+
+    document.getElementById('plan-delete').addEventListener('click', () => {
+        if (!PLAN_UI.selectedPlanId) return;
+        const plan = APP.data.paymentPlans.find(p => p.id === PLAN_UI.selectedPlanId);
+        if (!confirm(`¿Eliminar el plan "${plan?.name || ''}"?`)) return;
+        dbDelete('paymentPlans', PLAN_UI.selectedPlanId);
+        PLAN_UI.selectedPlanId = '';
+        PLAN_UI.draft = {};
+        renderPlanning();
+    });
+}
+
+window.editRecurring = function(id) {
+    const item = APP.data.recurringExpenses.find(r => r.id === id);
+    if (!item) return;
+    openEditModal({
+        title: 'Editar gasto fijo',
+        fields: [
+            { name: 'name', label: 'Nombre', type: 'text', value: item.name },
+            { name: 'amount', label: 'Monto', type: 'number', value: item.amount },
+            { name: 'day', label: 'Día de pago (1-31)', type: 'number', value: item.day }
+        ],
+        onSave: (values) => {
+            if (!values.name.trim()) return '❌ El nombre no puede estar vacío';
+            if (!validPositiveAmount(values.amount)) return '❌ Ingresa un monto válido';
+            dbPatch('recurringExpenses', id, {
+                name: values.name.trim(),
+                amount: money(values.amount),
+                day: clampDay(values.day, APP.currentMonth)
+            });
+            renderPlanning();
+            return null;
+        }
+    });
+};
+
+window.deleteRecurring = function(id) {
+    const item = APP.data.recurringExpenses.find(r => r.id === id);
+    if (!item || !confirm(`¿Eliminar el gasto fijo "${item.name}"?`)) return;
+    dbDelete('recurringExpenses', id);
+    renderPlanning();
+};
+
 // ============ CONFIGURATION ============
 function handleAddAccount(e) {
     e.preventDefault();
@@ -1563,15 +2133,7 @@ function handleAddAccount(e) {
         balance: 0
     };
 
-    APP.data.accounts.push(account);
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('accounts', account).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('accounts', account);
 
     e.target.reset();
     renderAccounts();
@@ -1584,6 +2146,7 @@ function renderAccounts() {
     selects.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
+        const previous = select.value;
         select.innerHTML = '<option value="">Seleccionar cuenta</option>';
         APP.data.accounts.forEach(acc => {
             const option = document.createElement('option');
@@ -1591,6 +2154,7 @@ function renderAccounts() {
             option.textContent = acc.name;
             select.appendChild(option);
         });
+        select.value = previous;
     });
 
     // Render cuentas disponibles para abono
@@ -1661,7 +2225,8 @@ function renderAccountsList() {
                 <div class="account-type">${acc.type}</div>
             </div>
             <div class="account-balance">$${formatNumber(balance)}</div>
-            <div style="display: flex; gap: 8px;">
+            <div class="row-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editAccount('${acc.id}')">✏️ Editar</button>
                 <button class="btn btn-primary btn-sm" onclick="showTransferModal('${acc.id}')">💸 Transferir</button>
                 <button class="btn btn-danger" onclick="deleteAccount('${acc.id}')">🗑️ Eliminar</button>
             </div>
@@ -1766,9 +2331,6 @@ window.showTransferModal = function(origenId) {
             return;
         }
 
-        cuentaOrigen.balance -= amount;
-        cuentaDestino.balance += amount;
-
         const transaction = {
             id: 'trans-' + Date.now(),
             type: 'Transferencia',
@@ -1776,21 +2338,14 @@ window.showTransferModal = function(origenId) {
             description: `Transferencia de ${cuentaOrigen.name} a ${cuentaDestino.name}${descripcion ? ': ' + descripcion : ''}`,
             amount: amount,
             account: origenId,
+            toAccount: destinoId,
             date: new Date().toISOString().split('T')[0],
             createdAt: Date.now()
         };
 
-        APP.data.transactions.push(transaction);
-
-        if (APP.isOnline && window.firebaseDB) {
-            Promise.all([
-                window.firebaseDB.saveData('accounts', cuentaOrigen),
-                window.firebaseDB.saveData('accounts', cuentaDestino),
-                window.firebaseDB.saveData('transactions', transaction)
-            ]).catch(err => console.error('Error guardando en Firebase:', err));
-        } else {
-            saveOfflineData();
-        }
+        dbSave('transactions', transaction);
+        dbAdjustBalance(origenId, -amount);
+        dbAdjustBalance(destinoId, amount);
 
         modal.remove();
         renderAccountsList();
@@ -1875,23 +2430,8 @@ window.deleteAccount = async function(accountId) {
                 return;
             }
 
-            cuentaDestino.balance += account.balance;
-            APP.data.accounts = APP.data.accounts.filter(a => a.id !== accountId);
-
-            if (APP.isOnline && window.firebaseDB) {
-                try {
-                    await Promise.all([
-                        window.firebaseDB.deleteData('accounts', accountId),
-                        window.firebaseDB.saveData('accounts', cuentaDestino)
-                    ]);
-                } catch (err) {
-                    console.error('Error deleting account:', err);
-                    APP.data.accounts.push(account);
-                    showNotification('⚠️ Error al eliminar', 'warning');
-                }
-            } else {
-                saveOfflineData();
-            }
+            dbAdjustBalance(destinoId, account.balance);
+            dbDelete('accounts', accountId);
 
             modal.remove();
             renderAccountsList();
@@ -1911,23 +2451,9 @@ window.deleteAccount = async function(accountId) {
         return;
     }
 
-    APP.data.accounts = APP.data.accounts.filter(a => a.id !== accountId);
+    dbDelete('accounts', accountId);
     renderAccountsList();
     renderAccounts();
-
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            await window.firebaseDB.deleteData('accounts', accountId);
-        } catch (err) {
-            console.error('Error deleting account:', err);
-            APP.data.accounts.push(account);
-            renderAccountsList();
-            renderAccounts();
-            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
 }
 
 function handleAddCategory(e) {
@@ -1940,15 +2466,7 @@ function handleAddCategory(e) {
         budget: getMoneyValue(document.getElementById("categoria-presupuesto").value) || 0
     };
 
-    APP.data.categories.push(category);
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('categories', category).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('categories', category);
 
     e.target.reset();
     renderCategories();
@@ -1958,6 +2476,7 @@ function handleAddCategory(e) {
 
 function renderCategories() {
     const select = document.getElementById('gasto-categoria');
+    const previous = select.value;
     select.innerHTML = '<option value="">Seleccionar categoría</option>';
     APP.data.categories.filter(c => c.type === 'Egreso').forEach(cat => {
         const option = document.createElement('option');
@@ -1965,6 +2484,7 @@ function renderCategories() {
         option.textContent = cat.name;
         select.appendChild(option);
     });
+    select.value = previous;
 }
 
 function renderCategoriesList() {
@@ -1976,7 +2496,10 @@ function renderCategoriesList() {
                 <div class="category-type">${cat.type}</div>
             </div>
             <div class="category-budget">$${formatNumber(cat.budget)}</div>
-            <button class="btn btn-danger" onclick="deleteCategory('${cat.id}')">Eliminar</button>
+            <div class="row-actions">
+                <button class="btn btn-secondary" onclick="editCategory('${cat.id}')">Editar</button>
+                <button class="btn btn-danger" onclick="deleteCategory('${cat.id}')">Eliminar</button>
+            </div>
         </div>
     `).join('');
 }
@@ -1990,49 +2513,21 @@ window.deleteCategory = async function(categoryId) {
         return;
     }
 
-    APP.data.categories = APP.data.categories.filter(c => c.id !== categoryId);
+    dbDelete('categories', categoryId);
     renderCategoriesList();
     renderCategories();
-
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            await window.firebaseDB.deleteData('categories', categoryId);
-        } catch (err) {
-            console.error('Error deleting category:', err);
-            APP.data.categories.push(category);
-            renderCategoriesList();
-            renderCategories();
-            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
 }
 
-window.deleteGoal = async function(goalId) {
+window.deleteGoal = function(goalId) {
     const goal = APP.data.goals.find(g => g.id === goalId);
     if (!goal) return;
 
-    const confirmed = confirm(`¿Eliminar la meta "${goal.name}"?`);
+    const confirmed = confirm(`¿Eliminar la meta "${goal.description}"?`);
     if (!confirmed) return;
 
-    APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
+    dbDelete('goals', goalId);
     renderSavingsGoalsList();
     updateDashboard();
-
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            await window.firebaseDB.deleteData('goals', goalId);
-        } catch (err) {
-            console.error('Error deleting goal:', err);
-            APP.data.goals.push(goal);
-            renderSavingsGoalsList();
-            updateDashboard();
-            showNotification('⚠️ Error al eliminar: ' + err.message, 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
 }
 
 // ============ SAVINGS GOALS ============
@@ -2048,15 +2543,7 @@ function handleAddSavingsGoal(e) {
         createdAt: Date.now()
     };
 
-    APP.data.goals.push(goal);
-
-    if (APP.isOnline && window.firebaseDB) {
-        window.firebaseDB.saveData('goals', goal).catch(err =>
-            console.error('Error guardando en Firebase:', err)
-        );
-    } else {
-        saveOfflineData();
-    }
+    dbSave('goals', goal);
 
     e.target.reset();
     renderSavingsGoalsList();
@@ -2090,6 +2577,7 @@ function renderSavingsGoalsList() {
                         ${goal.deadline ? `<p style="margin: 8px 0; color: #999; font-size: 13px;">Plazo: ${daysLeft} días</p>` : ''}
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="editGoal('${goal.id}')">✏️ Editar</button>
                         <button class="btn btn-primary btn-sm" onclick="promptAbonoAhorros('${goal.id}')">+ Abonar</button>
                         <button class="btn btn-info btn-sm" onclick="promptRetiroAhorros('${goal.id}')">💰 Retiro</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteSavingsGoal('${goal.id}')">🗑️ Eliminar</button>
@@ -2196,9 +2684,6 @@ window.promptRetiroAhorros = function(goalId) {
             return;
         }
 
-        cuentaDestino.balance += amount;
-        goal.currentAmount -= amount;
-
         const transaction = {
             id: 'trans-' + Date.now(),
             type: 'Ingreso',
@@ -2210,17 +2695,10 @@ window.promptRetiroAhorros = function(goalId) {
             createdAt: Date.now()
         };
 
-        APP.data.transactions.push(transaction);
-
-        if (APP.isOnline && window.firebaseDB) {
-            Promise.all([
-                window.firebaseDB.saveData('accounts', cuentaDestino),
-                window.firebaseDB.saveData('goals', goal),
-                window.firebaseDB.saveData('transactions', transaction)
-            ]).catch(err => console.error('Error guardando en Firebase:', err));
-        } else {
-            saveOfflineData();
-        }
+        dbSave('transactions', transaction);
+        dbAdjustBalance(destinoId, amount);
+        const currentGoal = APP.data.goals.find(g => g.id === goalId);
+        if (currentGoal) dbPatch('goals', goalId, { currentAmount: money(currentGoal.currentAmount - amount) });
 
         modal.remove();
         renderSavingsGoalsList();
@@ -2323,40 +2801,26 @@ window.showSavingsAbono = function(goalId) {
             return;
         }
 
-        // Update savings goal
-        goal.currentAmount += amount;
+        const currentGoal = APP.data.goals.find(g => g.id === goalId);
+        if (!currentGoal) {
+            showNotification('❌ Meta no encontrada', 'error');
+            return;
+        }
 
-        // Create ahorro transaction (not an egreso)
         const transaction = {
             id: 'trans-' + Date.now(),
             type: 'Ahorro',
             date: new Date().toISOString().split('T')[0],
             category: 'Ahorros',
-            description: `Abono a meta: ${goal.description}`,
+            description: `Abono a meta: ${currentGoal.description}`,
             amount: amount,
             account: accountId,
             timestamp: Date.now()
         };
 
-        APP.data.transactions.push(transaction);
-
-        // Update account balance
-        account.balance -= amount;
-
-        // Save locally
-        saveOfflineData();
-
-        // Sync to Firebase if online
-        if (APP.isOnline && window.firebaseDB) {
-            try {
-                await window.firebaseDB.updateData('goals', goalId, { currentAmount: goal.currentAmount });
-                await window.firebaseDB.saveData('transactions', transaction);
-                await window.firebaseDB.updateData('accounts', accountId, { balance: account.balance });
-            } catch (err) {
-                console.error('Error saving to Firebase:', err);
-                showNotification('⚠️ Sincronización parcial: datos guardados localmente', 'warning');
-            }
-        }
+        dbPatch('goals', goalId, { currentAmount: money(currentGoal.currentAmount + amount) });
+        dbSave('transactions', transaction);
+        dbAdjustBalance(accountId, -amount);
 
         modal.remove();
         updateDashboard();
@@ -2446,24 +2910,8 @@ window.deleteSavingsGoal = async function(goalId) {
                 return;
             }
 
-            cuentaDestino.balance += goal.currentAmount;
-
-            APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
-
-            if (APP.isOnline && window.firebaseDB) {
-                try {
-                    await Promise.all([
-                        window.firebaseDB.deleteData('goals', goalId),
-                        window.firebaseDB.saveData('accounts', cuentaDestino)
-                    ]);
-                } catch (err) {
-                    console.error('Error deleting goal:', err);
-                    APP.data.goals.push(goal);
-                    showNotification('⚠️ Error al eliminar', 'warning');
-                }
-            } else {
-                saveOfflineData();
-            }
+            dbAdjustBalance(destinoId, goal.currentAmount);
+            dbDelete('goals', goalId);
 
             modal.remove();
             renderSavingsGoalsList();
@@ -2482,24 +2930,10 @@ window.deleteSavingsGoal = async function(goalId) {
     const confirmed = confirm(`¿Eliminar la meta "${goal.description}"?`);
     if (!confirmed) return;
 
-    APP.data.goals = APP.data.goals.filter(g => g.id !== goalId);
+    dbDelete('goals', goalId);
     renderSavingsGoalsList();
     updateSavingsKpis();
     updateDashboard();
-
-    if (APP.isOnline && window.firebaseDB) {
-        try {
-            await window.firebaseDB.deleteData('goals', goalId);
-        } catch (err) {
-            console.error('Error deleting goal:', err);
-            APP.data.goals.push(goal);
-            renderSavingsGoalsList();
-            updateDashboard();
-            showNotification('⚠️ Error al eliminar', 'warning');
-        }
-    } else {
-        saveOfflineData();
-    }
 };
 
 function updateSavingsKpis() {
@@ -2890,62 +3324,22 @@ async function performDeleteAllData() {
     try {
         showNotification('🔄 Eliminando datos... Por favor espera', 'info');
 
-        // Preserve Firebase config and database mode preference
+        if (CLOUD.enabled) {
+            COLLECTION_NAMES.forEach(name => {
+                APP.data[name].forEach(item => cloudCall(window.firebaseDB.deleteRecord(name, item.id)));
+            });
+            await Promise.race([
+                window.firebaseDB.pendingWrites(),
+                new Promise(resolve => setTimeout(resolve, 10000))
+            ]);
+        }
+
         const firebaseConfig = localStorage.getItem('firebaseConfig');
-        const dbModePreference = localStorage.getItem('db_mode_preference');
-
-        // Delete local data
         localStorage.clear();
+        if (firebaseConfig) localStorage.setItem('firebaseConfig', firebaseConfig);
 
-        // Restore Firebase config and database mode preference
-        if (firebaseConfig) {
-            localStorage.setItem('firebaseConfig', firebaseConfig);
-        }
-        if (dbModePreference) {
-            localStorage.setItem('db_mode_preference', dbModePreference);
-        }
-
-        // Delete Firebase data
-        if (APP.isOnline && window.firebaseDB) {
-            const { getFirebaseInstance } = window.firebaseDB;
-            const { db } = getFirebaseInstance();
-
-            if (db) {
-                const collections = ['transactions', 'accounts', 'categories', 'debts', 'debtPayments', 'goals'];
-
-                for (const collectionName of collections) {
-                    try {
-                        const docs = await window.firebaseDB.loadData(collectionName);
-                        for (const doc of docs) {
-                            await window.firebaseDB.deleteData(collectionName, doc.id);
-                        }
-                    } catch (err) {
-                        console.error(`Error eliminando ${collectionName}:`, err);
-                    }
-                }
-
-                showNotification('✅ Todos los datos han sido eliminados. Recargando...', 'success');
-            } else {
-                showNotification('✅ Datos eliminados. Recargando...', 'success');
-            }
-        } else {
-            showNotification('✅ Datos locales eliminados. Recargando...', 'success');
-        }
-
-        // Reset app data
-        APP.data = {
-            transactions: [],
-            debts: [],
-            accounts: [],
-            categories: [],
-            goals: [],
-            debtPayments: []
-        };
-
-        // Reload page after a short delay
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
+        showNotification('✅ Datos eliminados. Recargando...', 'success');
+        setTimeout(() => location.reload(), 1500);
     } catch (error) {
         console.error('Error al borrar datos:', error);
         showNotification('❌ Error: ' + error.message, 'error');
