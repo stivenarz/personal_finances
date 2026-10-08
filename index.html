@@ -15,7 +15,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle'>💰</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='50'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle'>💰</text></svg>">
 
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=3">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -27,6 +27,7 @@
     </div>
 
     <div class="container">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -49,6 +50,9 @@
                 <a href="#" class="nav-item" data-view="ahorros">
                     <span class="icon">🎯</span> Ahorros
                 </a>
+                <a href="#" class="nav-item" data-view="planificacion">
+                    <span class="icon">🗓️</span> Planificación
+                </a>
                 <a href="#" class="nav-item" data-view="transacciones">
                     <span class="icon">📝</span> Transacciones
                 </a>
@@ -57,6 +61,7 @@
                 </a>
             </nav>
             <div class="sidebar-footer">
+                <span class="sync-badge" data-sync-badge>Cargando...</span>
                 <p>Version 1</p>
             </div>
         </aside>
@@ -388,6 +393,75 @@
                 </div>
 
                 <!-- CONFIGURACION VIEW -->
+                <div class="view" id="view-planificacion">
+                    <div class="plan-grid">
+                        <section class="plan-card">
+                            <h3>Ingresos fijos del mes</h3>
+                            <p class="plan-help">Son una proyección para planificar. Solo los ingresos registrados manualmente cuentan como ingreso real.</p>
+                            <form id="form-plan-ingresos" class="plan-form">
+                                <label>Ingresos fijos del mes ($)
+                                    <input type="number" id="plan-ingresos-fijos" min="0" step="0.01" required>
+                                </label>
+                                <label>Frecuencia de cobro
+                                    <select id="plan-frecuencia">
+                                        <option value="mensual">Mensual</option>
+                                        <option value="quincenal">Quincenal</option>
+                                    </select>
+                                </label>
+                                <label>Día de cobro
+                                    <input type="number" id="plan-dia-1" min="1" max="31" required>
+                                </label>
+                                <label id="plan-dia-2-wrap" class="hidden">Segundo día de cobro (quincena)
+                                    <input type="number" id="plan-dia-2" min="1" max="31">
+                                </label>
+                                <button type="submit" class="btn btn-primary">Guardar ingresos fijos</button>
+                            </form>
+                        </section>
+
+                        <section class="plan-card">
+                            <h3>Gastos fijos</h3>
+                            <form id="form-gasto-fijo" class="plan-form">
+                                <label>Nombre
+                                    <input type="text" id="fijo-nombre" placeholder="Ej: Arriendo" required>
+                                </label>
+                                <label>Monto ($)
+                                    <input type="number" id="fijo-monto" min="0" step="0.01" required>
+                                </label>
+                                <label>Día de pago
+                                    <input type="number" id="fijo-dia" min="1" max="31" required>
+                                </label>
+                                <button type="submit" class="btn btn-primary">Agregar gasto fijo</button>
+                            </form>
+                            <div id="list-gastos-fijos" class="plan-list"></div>
+                        </section>
+
+                        <section class="plan-card plan-wide">
+                            <h3>Análisis del mes</h3>
+                            <div id="plan-kpis" class="plan-kpis"></div>
+                            <div id="plan-alerts"></div>
+                        </section>
+
+                        <section class="plan-card plan-wide">
+                            <h3>Planes de pago</h3>
+                            <div class="plan-toolbar">
+                                <select id="plan-selector"></select>
+                                <button type="button" class="btn btn-secondary" id="plan-update">Actualizar plan</button>
+                                <button type="button" class="btn btn-danger" id="plan-delete">Eliminar plan</button>
+                            </div>
+                            <div id="plan-obligations" class="plan-list"></div>
+                            <div class="plan-toolbar">
+                                <input type="text" id="plan-name" placeholder="Nombre del nuevo plan">
+                                <button type="button" class="btn btn-primary" id="plan-save">Guardar como plan</button>
+                            </div>
+                        </section>
+
+                        <section class="plan-card plan-wide">
+                            <h3>Calendario de pagos</h3>
+                            <div id="plan-calendar" class="plan-calendar"></div>
+                        </section>
+                    </div>
+                </div>
+
                 <div class="view" id="view-configuracion">
                     <div class="config-grid">
                         <!-- Cuentas -->
@@ -446,24 +520,15 @@
                         <div class="config-section">
                             <h3>🔥 Configuración Firebase</h3>
 
-                            <!-- Database Mode Toggle -->
+                            <!-- Estado de sincronización -->
                             <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
-                                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 15px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
                                     <div style="flex: 1;">
-                                        <strong style="display: block; margin-bottom: 10px;">Seleccionar Base de Datos</strong>
-                                        <div style="display: flex; gap: 15px;">
-                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                                <input type="radio" name="db-mode" value="local" id="db-mode-local" style="cursor: pointer; width: 18px; height: 18px;">
-                                                <span>⚫ Local</span>
-                                            </label>
-                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                                <input type="radio" name="db-mode" value="firebase" id="db-mode-firebase" style="cursor: pointer; width: 18px; height: 18px;">
-                                                <span>🔵 Firebase</span>
-                                            </label>
-                                        </div>
-                                        <span id="db-mode-status" style="display: block; color: var(--text-secondary); font-size: 12px; margin-top: 8px;">Cargando...</span>
+                                        <strong style="display: block; margin-bottom: 8px;">Estado de sincronización</strong>
+                                        <span class="sync-badge" data-sync-badge id="db-mode-status">Cargando...</span>
+                                        <span style="display: block; color: var(--text-secondary); font-size: 12px; margin-top: 8px;">Los datos se guardan en este dispositivo y se sincronizan automáticamente con la nube cuando hay credenciales.</span>
                                     </div>
-                                    <button type="button" class="btn btn-secondary" id="sync-data-btn" style="display: none; white-space: nowrap;">
+                                    <button type="button" class="btn btn-secondary" id="sync-data-btn" style="white-space: nowrap;">
                                         🔄 Sincronizar
                                     </button>
                                 </div>
@@ -575,8 +640,8 @@
     </script>
 
     <script type="module">
-        import './firebase-config.js';
-        import './app.js';
+        import './firebase-config.js?v=3';
+        import './app.js?v=6';
     </script>
 </body>
 </html>
