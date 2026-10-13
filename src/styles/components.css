@@ -5,18 +5,60 @@
 
 [hidden] { display: none !important; }
 
-/* ---- PWA instalada ----
-   La ventana ya empieza bajo la barra de estado (status-bar-style "default"), así que la altura es
-   la del viewport (100%), no 100vh (alto de pantalla: se pasa de la ventana). Abajo se deja la zona
-   segura para que la línea de control del iPhone no tape el contenido. */
+/* ---- PWA instalada (status-bar-style "default") ----
+   La ventana empieza bajo la barra de estado y llega hasta el borde inferior, así que la altura es la del
+   viewport (100%). (Con "black-translucent" iOS recorta la página a 812 pt y deja una franja abajo.)
+   Abajo se deja la zona segura para la línea de control del iPhone. */
 @media (display-mode: standalone) {
     .container { height: 100%; padding-bottom: 0; }
     .views-container { padding-bottom: calc(1px + env(safe-area-inset-bottom)); }
 }
 
 @media (display-mode: standalone) and (max-width: 768px) {
-    .sidebar { top: env(safe-area-inset-top); bottom: 0; height: auto; }
+    .sidebar { top: 0; bottom: 0; height: auto; }
     .sidebar-footer { padding-bottom: calc(env(safe-area-inset-bottom) - 20px); }
+}
+
+/* Fundido entre la barra de estado (color sólido de .status-tint) y el dibujo: así el dibujo parece
+   continuar hasta el borde superior de la pantalla en la PWA. */
+@media (display-mode: standalone) and (max-width: 768px) {
+    .top-header,
+    .sidebar-header { position: relative; isolation: isolate; }
+
+    .top-header::before,
+    .sidebar-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 72px;
+        background: linear-gradient(to bottom, #6a62cf 0%, rgba(106, 98, 207, 0.8) 30%, rgba(106, 98, 207, 0) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .top-header > *,
+    .sidebar-header > * { position: relative; z-index: 1; }
+}
+
+/* Teñido de la barra de estado: iOS colorea esa zona con el color de los elementos fijos pegados al borde
+   superior. Esta banda fija (del color del dibujo) hace que la barra de estado se vea morada y continúe
+   el encabezado y el menú, aunque la página empiece justo debajo de la barra. */
+.status-tint { display: none; }
+
+@media (display-mode: standalone) and (max-width: 768px) {
+    .status-tint {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: #6a62cf;
+        z-index: 1001; /* por encima del menú (999) y del fondo oscuro (998) */
+        pointer-events: none;
+    }
 }
 
 /* ---- Barra de sección con botón "Agregar" ---- */
@@ -235,4 +277,63 @@ ul.danger-text { margin-left: 20px; }
     .sidebar-header { padding-left: 16px; padding-right: 14px; gap: 8px; }
     .sidebar-header h1 { font-size: 23px; gap: 8px; justify-content: flex-start; }
     .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
+}
+
+/* ==========================================================================
+   Encabezado y menú con ilustración a sangre (hasta el borde superior)
+   El dibujo llega bajo la barra de estado; el contenido respeta la zona segura
+   con env(safe-area-inset-top) (vale 0 con status-bar-style "default"; ver .status-tint más arriba).
+   ========================================================================== */
+.top-header {
+    background: #5b5fcf url('../assets/header-art.svg') center / cover no-repeat;
+    border-bottom: none;
+    box-shadow: 0 4px 16px rgba(80, 60, 160, 0.25);
+    color: #fff;
+}
+
+.header-left h2 {
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.date-filter label {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.date-filter input {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+.date-filter input::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+.top-header .btn-export {
+    background: rgba(255, 255, 255, 0.95);
+    color: #4f46c8;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.top-header .btn-export:hover { background: #fff; color: #3730a3; }
+
+.mobile-menu-toggle {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Menú: el degradado y la ilustración llegan hasta arriba; el título baja la zona segura */
+.sidebar-header {
+    background: url('../assets/header-art.svg') center / cover no-repeat;
+    padding-top: calc(env(safe-area-inset-top) + 22px);
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .sidebar { top: 0; height: 100dvh; }
+    .top-header { padding-bottom: 14px; }
 }
