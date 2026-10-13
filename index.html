@@ -6,17 +6,17 @@
     <meta name="description" content="Aplicación de gestión de finanzas personales con almacenamiento local y funcionamiento offline">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Finanzas">
 
     <title>Finanzas Personales - Control Integral</title>
 
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle'>💰</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='50'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle'>💰</text></svg>">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 
-    <link rel="stylesheet" href="src/styles/main.css?v=6">
-    <link rel="stylesheet" href="src/styles/components.css?v=5">
+    <link rel="stylesheet" href="src/styles/main.css?v=7">
+    <link rel="stylesheet" href="src/styles/components.css?v=10">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -31,7 +31,9 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>💰 Finanzas</h1>
-                <button class="sidebar-close" id="sidebar-close" aria-label="Cerrar menú">✕</button>
+                <button class="sidebar-close" id="sidebar-close" aria-label="Cerrar menú">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-view="dashboard"><span class="icon">📊</span> Dashboard</a>

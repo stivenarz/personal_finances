@@ -5,10 +5,18 @@
 
 [hidden] { display: none !important; }
 
-/* ---- PWA: sin espacio sobrante en la parte inferior ---- */
+/* ---- PWA instalada ----
+   La ventana ya empieza bajo la barra de estado (status-bar-style "default"), así que la altura es
+   la del viewport (100%), no 100vh (alto de pantalla: se pasa de la ventana). Abajo se deja la zona
+   segura para que la línea de control del iPhone no tape el contenido. */
 @media (display-mode: standalone) {
-    .container { padding-bottom: 0; }
-    .views-container { padding-bottom: 8px; }
+    .container { height: 100%; padding-bottom: 0; }
+    .views-container { padding-bottom: calc(1px + env(safe-area-inset-bottom)); }
+}
+
+@media (display-mode: standalone) and (max-width: 768px) {
+    .sidebar { top: env(safe-area-inset-top); bottom: 0; height: auto; }
+    .sidebar-footer { padding-bottom: calc(env(safe-area-inset-bottom) - 20px); }
 }
 
 /* ---- Barra de sección con botón "Agregar" ---- */

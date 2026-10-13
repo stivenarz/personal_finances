@@ -9,14 +9,17 @@
  *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
  */
 
-const CACHE_VERSION = 'finanzas-v23';
-const RUNTIME_CACHE = 'finanzas-runtime-v23';
+const CACHE_VERSION = 'finanzas-v24';
+const RUNTIME_CACHE = 'finanzas-runtime-v24';
 
 // Rutas relativas al service worker: la app puede vivir en la raíz o en una subruta (GitHub Pages)
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
   './offline.html',
   './src/main.js',
   './src/styles/main.css',
