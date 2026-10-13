@@ -10,7 +10,7 @@ export function registerServiceWorker() {
     const hadController = !!navigator.serviceWorker.controller;
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('service-worker.js') // relativo a la página: funciona en la raíz y en subrutas (GitHub Pages)
             .then(registration => {
                 setInterval(() => registration.update(), 60000);
             })

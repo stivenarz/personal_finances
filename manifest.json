@@ -2,12 +2,12 @@
   "name": "Finanzas Personales - Control Integral",
   "short_name": "Finanzas",
   "description": "Aplicación de gestión de finanzas personales con almacenamiento local",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#667eea",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "prefer_related_applications": false,
   "icons": [
     {
@@ -43,7 +43,7 @@
       "name": "Registrar Gasto",
       "short_name": "Gasto",
       "description": "Registra un nuevo gasto rápidamente",
-      "url": "/?tab=gastos",
+      "url": "./?tab=gastos",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23e74c3c' width='96' height='96' rx='20'/><text x='48' y='70' font-size='60' fill='white' text-anchor='middle'>💳</text></svg>",
@@ -55,7 +55,7 @@
       "name": "Registrar Ingreso",
       "short_name": "Ingreso",
       "description": "Registra un nuevo ingreso rápidamente",
-      "url": "/?tab=ingresos",
+      "url": "./?tab=ingresos",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%2327ae60' width='96' height='96' rx='20'/><text x='48' y='70' font-size='60' fill='white' text-anchor='middle'>💵</text></svg>",
@@ -67,7 +67,7 @@
       "name": "Ver Dashboard",
       "short_name": "Dashboard",
       "description": "Abre el dashboard con tus KPIs",
-      "url": "/?tab=dashboard",
+      "url": "./?tab=dashboard",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%233498db' width='96' height='96' rx='20'/><text x='48' y='70' font-size='60' fill='white' text-anchor='middle'>📊</text></svg>",

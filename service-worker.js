@@ -9,52 +9,53 @@
  *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
  */
 
-const CACHE_VERSION = 'finanzas-v22';
-const RUNTIME_CACHE = 'finanzas-runtime-v22';
+const CACHE_VERSION = 'finanzas-v23';
+const RUNTIME_CACHE = 'finanzas-runtime-v23';
 
+// Rutas relativas al service worker: la app puede vivir en la raíz o en una subruta (GitHub Pages)
 const CORE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/offline.html',
-  '/src/main.js',
-  '/src/styles/main.css',
-  '/src/styles/components.css',
-  '/src/core/utils.js',
-  '/src/core/state.js',
-  '/src/core/notifications.js',
-  '/src/core/modal.js',
-  '/src/core/ui.js',
-  '/src/core/router.js',
-  '/src/core/menu.js',
-  '/src/core/pwa.js',
-  '/src/services/collections.js',
-  '/src/services/config-service.js',
-  '/src/services/data-service.js',
-  '/src/services/export-service.js',
-  '/src/services/providers/local.js',
-  '/src/services/providers/firebase.js',
-  '/src/services/providers/sheets.js',
-  '/src/domain/ledger.js',
-  '/src/domain/migrations.js',
-  '/src/domain/transactions.js',
-  '/src/domain/accounts.js',
-  '/src/features/shared/options.js',
-  '/src/features/dashboard/index.js',
-  '/src/features/accounts/index.js',
-  '/src/features/accounts/forms.js',
-  '/src/features/expenses/index.js',
-  '/src/features/income/index.js',
-  '/src/features/debts/index.js',
-  '/src/features/savings/index.js',
-  '/src/features/planning/index.js',
-  '/src/features/transactions/index.js',
-  '/src/features/transactions/forms.js',
-  '/src/features/shared/export-dialog.js',
-  '/src/features/settings/index.js',
-  '/src/features/settings/categories.js',
-  '/src/features/settings/provider-panel.js',
-  '/src/features/settings/danger-zone.js'
+  './',
+  './index.html',
+  './manifest.json',
+  './offline.html',
+  './src/main.js',
+  './src/styles/main.css',
+  './src/styles/components.css',
+  './src/core/utils.js',
+  './src/core/state.js',
+  './src/core/notifications.js',
+  './src/core/modal.js',
+  './src/core/ui.js',
+  './src/core/router.js',
+  './src/core/menu.js',
+  './src/core/pwa.js',
+  './src/services/collections.js',
+  './src/services/config-service.js',
+  './src/services/data-service.js',
+  './src/services/export-service.js',
+  './src/services/providers/local.js',
+  './src/services/providers/firebase.js',
+  './src/services/providers/sheets.js',
+  './src/domain/ledger.js',
+  './src/domain/migrations.js',
+  './src/domain/transactions.js',
+  './src/domain/accounts.js',
+  './src/features/shared/options.js',
+  './src/features/dashboard/index.js',
+  './src/features/accounts/index.js',
+  './src/features/accounts/forms.js',
+  './src/features/expenses/index.js',
+  './src/features/income/index.js',
+  './src/features/debts/index.js',
+  './src/features/savings/index.js',
+  './src/features/planning/index.js',
+  './src/features/transactions/index.js',
+  './src/features/transactions/forms.js',
+  './src/features/shared/export-dialog.js',
+  './src/features/settings/index.js',
+  './src/features/settings/categories.js',
+  './src/features/settings/provider-panel.js',
+  './src/features/settings/danger-zone.js'
 ];
 
 // Hosts externos cuyos archivos estáticos sí se cachean
@@ -106,7 +107,7 @@ async function networkFirst(request) {
   } catch (error) {
     const cached = (await caches.match(request)) || (await caches.match(request, { ignoreSearch: true }));
     if (cached) return cached;
-    if (request.mode === 'navigate') return caches.match('/offline.html');
+    if (request.mode === 'navigate') return caches.match('./offline.html');
     throw error;
   }
 }
