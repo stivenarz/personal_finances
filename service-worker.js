@@ -9,8 +9,8 @@
  *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
  */
 
-const CACHE_VERSION = 'finanzas-v26';
-const RUNTIME_CACHE = 'finanzas-runtime-v26';
+const CACHE_VERSION = 'finanzas-v27';
+const RUNTIME_CACHE = 'finanzas-runtime-v27';
 
 // Rutas relativas al service worker: la app puede vivir en la raíz o en una subruta (GitHub Pages)
 const CORE_ASSETS = [
@@ -37,6 +37,7 @@ const CORE_ASSETS = [
   './src/services/config-service.js',
   './src/services/data-service.js',
   './src/services/export-service.js',
+  './src/services/theme-service.js',
   './src/services/providers/local.js',
   './src/services/providers/firebase.js',
   './src/services/providers/sheets.js',
@@ -57,7 +58,8 @@ const CORE_ASSETS = [
   './src/features/transactions/forms.js',
   './src/features/shared/export-dialog.js',
   './src/features/settings/index.js',
-  './src/features/settings/categories.js',
+  './src/features/categories/index.js',
+  './src/features/settings/appearance.js',
   './src/features/settings/provider-panel.js',
   './src/features/settings/danger-zone.js'
 ];

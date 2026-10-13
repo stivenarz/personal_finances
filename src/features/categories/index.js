@@ -1,22 +1,25 @@
 /**
- * Gestión de categorías (alta/edición en modal).
+ * Vista CATEGORÍAS (componente independiente): categorías de egresos e ingresos con su presupuesto
+ * mensual. Alta y edición en modal.
  */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
 import { escapeHtml, formatNumber, money, uid } from '../../core/utils.js';
-import { onActions } from '../../core/ui.js';
+import { sectionToolbar, emptyState, onActions } from '../../core/ui.js';
 
-export function mountCategories(section) {
-    section.innerHTML = `
-        <div class="section-toolbar">
-            <h3>Gestionar Categorías</h3>
-            <button type="button" class="btn btn-primary" data-action="add">➕ Agregar</button>
+let root;
+
+export function mount(container) {
+    root = container;
+    root.innerHTML = `
+        <div class="list-section">
+            ${sectionToolbar('Mis categorías', { addLabel: 'Agregar categoría' })}
+            <div class="categories-list" data-list></div>
         </div>
-        <div class="categories-list" data-list></div>
     `;
 
-    onActions(section, {
+    onActions(root, {
         add: () => openCategoryForm(),
         edit: (id) => openCategoryForm(DataService.find('categories', id)),
         delete: (id) => deleteCategory(DataService.find('categories', id))
@@ -62,19 +65,20 @@ async function deleteCategory(category) {
     showNotification('🗑️ Categoría eliminada', 'success');
 }
 
-export function renderCategories(section) {
+export function render() {
     const categories = DataService.all('categories');
-    section.querySelector('[data-list]').innerHTML = categories.map(cat => `
-        <div class="category-item">
-            <div>
-                <div class="category-name">${escapeHtml(cat.name)}</div>
-                <div class="category-type">${escapeHtml(cat.type)}</div>
-            </div>
-            <div class="category-budget">$${formatNumber(cat.budget)}</div>
-            <div class="row-actions">
-                <button class="btn btn-secondary" data-action="edit" data-id="${escapeHtml(cat.id)}">Editar</button>
-                <button class="btn btn-danger" data-action="delete" data-id="${escapeHtml(cat.id)}">Eliminar</button>
-            </div>
-        </div>
-    `).join('') || '<p class="empty-state">No hay categorías</p>';
+    root.querySelector('[data-list]').innerHTML = categories.length
+        ? categories.map(cat => `
+            <div class="category-item">
+                <div>
+                    <div class="category-name">${escapeHtml(cat.name)}</div>
+                    <div class="category-type">${escapeHtml(cat.type)}</div>
+                </div>
+                <div class="category-budget">$${formatNumber(cat.budget)}</div>
+                <div class="row-actions">
+                    <button class="btn btn-secondary" data-action="edit" data-id="${escapeHtml(cat.id)}">Editar</button>
+                    <button class="btn btn-danger" data-action="delete" data-id="${escapeHtml(cat.id)}">Eliminar</button>
+                </div>
+            </div>`).join('')
+        : emptyState('Aún no tienes categorías. Crea la primera para clasificar tus gastos e ingresos.');
 }

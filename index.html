@@ -27,12 +27,23 @@
             window.addEventListener('load', function () { detect(); setTimeout(detect, 600); });
         })();
     </script>
+    <script>
+        // Tema (claro/oscuro/automático) aplicado antes del primer pintado para evitar el parpadeo. Lógica completa en src/services/theme-service.js
+        (function () {
+            try {
+                var pref = localStorage.getItem('finanzas_theme');
+                var dark = pref === 'dark' || ((pref !== 'light') && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+                document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+            } catch (e) { /* sin almacenamiento: queda el tema claro */ }
+        })();
+    </script>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 
     <link rel="stylesheet" href="src/styles/main.css?v=8">
-    <link rel="stylesheet" href="src/styles/components.css?v=20">
+    <link rel="stylesheet" href="src/styles/components.css?v=21">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -57,6 +68,7 @@
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-view="dashboard"><span class="icon">📊</span> Dashboard</a>
                 <a href="#" class="nav-item" data-view="cuentas"><span class="icon">🏦</span> Cuentas</a>
+                <a href="#" class="nav-item" data-view="categorias"><span class="icon">🏷️</span> Categorías</a>
                 <a href="#" class="nav-item" data-view="gastos"><span class="icon">💳</span> Gastos</a>
                 <a href="#" class="nav-item" data-view="ingresos"><span class="icon">💵</span> Ingresos</a>
                 <a href="#" class="nav-item" data-view="deudas"><span class="icon">📋</span> Deudas</a>
@@ -90,6 +102,7 @@
             <div class="views-container">
                 <div class="view" id="view-dashboard"></div>
                 <div class="view" id="view-cuentas"></div>
+                <div class="view" id="view-categorias"></div>
                 <div class="view" id="view-gastos"></div>
                 <div class="view" id="view-ingresos"></div>
                 <div class="view" id="view-deudas"></div>

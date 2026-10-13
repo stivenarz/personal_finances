@@ -10,6 +10,7 @@ import {
     isCreditCard, totalAvailable, totalCreditDebt, totalSavings
 } from '../../domain/ledger.js';
 import { categoryLabel } from '../shared/options.js';
+import { onThemeChange } from '../../services/theme-service.js';
 
 let root;
 const charts = {};
@@ -24,8 +25,22 @@ const kpi = (color, icon, label, key, initial = '$0') => `
         </div>
     </div>`;
 
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/** Los gráficos toman sus colores del tema: al cambiarlo se recrean. */
+function resetCharts() {
+    Object.keys(charts).forEach(key => {
+        charts[key].destroy();
+        delete charts[key];
+    });
+}
+
 export function mount(container) {
     root = container;
+    onThemeChange(() => {
+        resetCharts();
+        if (root.classList.contains('active')) render();
+    });
     root.innerHTML = `
         <div class="dashboard-grid">
             <div class="kpi-container">
@@ -139,6 +154,8 @@ function renderGoals() {
 
 function upsertChart(key, canvasKey, config) {
     if (typeof Chart === 'undefined') return;
+    Chart.defaults.color = cssVar('--text-secondary');
+    Chart.defaults.borderColor = cssVar('--border');
     const canvas = root.querySelector(`[data-chart="${canvasKey}"]`);
     if (!canvas) return;
 
@@ -166,7 +183,7 @@ function renderCharts(transactions) {
         type: 'doughnut',
         data: {
             labels: Object.keys(byCategory),
-            datasets: [{ data: Object.values(byCategory), backgroundColor: COLORS, borderColor: '#fff', borderWidth: 2 }]
+            datasets: [{ data: Object.values(byCategory), backgroundColor: COLORS, borderColor: cssVar('--bg-primary'), borderWidth: 2 }]
         },
         options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
     });

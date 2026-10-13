@@ -11,7 +11,8 @@ Aplicación web (PWA) para gestionar tus finanzas personales. Funciona 100 % en 
 - **Gastos / Ingresos / Transacciones**: alta y edición siempre en **formularios modales**.
 - **Deudas**, **Ahorros** (metas con abonos y retiros) y **Planificación** (ingresos y gastos fijos, planes de pago, calendario de saldo; incluye las tarjetas como obligación).
 - **Exportar** el reporte del mes en **CSV, Excel (.xlsx) o PDF** (resumen, transacciones, cuentas, tarjetas, deudas y metas), a cargo de `services/export-service.js`.
-- **Configuración**: categorías, base de datos (Solo local / Firebase / Google Sheets) y zona de peligro.
+- **Categorías** (vista propia): categorías de egresos e ingresos con presupuesto mensual.
+- **Configuración**: apariencia (**modo claro, oscuro o automático** según el sistema), base de datos (Solo local / Firebase / Google Sheets) y zona de peligro.
 - **Nada de totales guardados**: saldos, avance de metas, saldo de deudas e intereses se calculan siempre desde los movimientos, así todos los dispositivos coinciden.
 
 ## 🚀 Inicio rápido
@@ -35,6 +36,7 @@ src/
 ├── services/
 │   ├── data-service.js      ÚNICA API de datos para los componentes (+ sync/reconciliación)
 │   ├── config-service.js    proveedor y credenciales (localStorage del dispositivo)
+│   ├── theme-service.js     modo claro / oscuro / automático (prefers-color-scheme)
 │   ├── export-service.js    reporte del mes → CSV / XLSX / PDF (lógica separada de la UI)
 │   └── providers/           local.js · firebase.js · sheets.js  (mismo contrato)
 ├── domain/
@@ -43,7 +45,7 @@ src/
 │   ├── accounts.js          reglas de cuentas y tarjetas
 │   └── migrations.js        paso a totales calculados (idempotente)
 ├── features/                un componente por vista: dashboard, accounts, expenses, income,
-│                            debts, savings, planning, transactions, settings
+│                            debts, savings, planning, transactions, categories, settings
 └── styles/                  main.css · components.css
 google-apps-script/Code.gs   backend de Google Sheets
 docs/                        guías (Firebase, Google Sheets, PWA) y arquitectura de sincronización

@@ -16,6 +16,7 @@ import { registerServiceWorker } from './core/pwa.js';
 import { uiState } from './core/state.js';
 import { showNotification } from './core/notifications.js';
 import { runMigrations } from './domain/migrations.js';
+import { initTheme } from './services/theme-service.js';
 import { renderSyncStatus } from './features/settings/provider-panel.js';
 import { openExportDialog } from './features/shared/export-dialog.js';
 
@@ -27,15 +28,18 @@ import * as debts from './features/debts/index.js';
 import * as savings from './features/savings/index.js';
 import * as planning from './features/planning/index.js';
 import * as transactions from './features/transactions/index.js';
+import * as categories from './features/categories/index.js';
 import * as settings from './features/settings/index.js';
 
 registerServiceWorker();
 
 async function start() {
+    initTheme();
     await DataService.init();
 
     registerView('dashboard', { title: 'Dashboard', feature: dashboard });
     registerView('cuentas', { title: 'Cuentas', feature: accounts });
+    registerView('categorias', { title: 'Categorías', feature: categories });
     registerView('gastos', { title: 'Gastos', feature: expenses });
     registerView('ingresos', { title: 'Ingresos', feature: income });
     registerView('deudas', { title: 'Deudas', feature: debts });

@@ -344,3 +344,85 @@ ul.danger-text { margin-left: 20px; }
     .sidebar { top: 0; height: 100dvh; }
     .top-header { padding-bottom: 14px; }
 }
+
+/* ==========================================================================
+   Modo oscuro: se redefinen las variables de color (el tema lo pone theme-service en <html data-theme>)
+   ========================================================================== */
+:root { --loading-bg: rgba(255, 255, 255, 0.95); }
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --primary: #60a5fa;
+    --primary-light: rgba(96, 165, 250, 0.18);
+    --secondary: #34d399;
+    --secondary-light: rgba(52, 211, 153, 0.16);
+    --danger: #f87171;
+    --danger-light: rgba(248, 113, 113, 0.16);
+    --warning: #fbbf24;
+    --warning-light: rgba(251, 191, 36, 0.16);
+    --dark: #e5e7eb;
+    --dark-light: #1f2735;
+    --border: #2b3445;
+    --text-primary: #e6e9ef;
+    --text-secondary: #98a2b3;
+    --bg-primary: #151a24;
+    --bg-secondary: #0c1017;
+    --loading-bg: rgba(12, 16, 23, 0.96);
+}
+
+/* Campos de formulario sin estilo propio (especificidad 0: no pisa los estilos de cada componente) */
+:where(:root[data-theme="dark"]) :where(input, select, textarea) {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+:root[data-theme="dark"] .badge-auto { color: #fbbf24; }
+:root[data-theme="dark"] .modal-card,
+:root[data-theme="dark"] .kpi-card,
+:root[data-theme="dark"] .chart-card { box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45); }
+:root[data-theme="dark"] .account-item.credit-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.16), rgba(118, 75, 162, 0.16));
+}
+
+/* ---- Selector de apariencia (Configuración) ---- */
+.theme-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.theme-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 8px;
+    text-align: center;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.theme-option:active { transform: scale(0.97); }
+.theme-option input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-option-icon { font-size: 26px; line-height: 1; }
+.theme-option-label { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+.theme-option small { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
+
+.theme-option:has(input:checked) {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.theme-option:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+    .theme-options { grid-template-columns: 1fr; }
+    .theme-option { flex-direction: row; justify-content: flex-start; text-align: left; gap: 12px; padding: 12px 14px; }
+    .theme-option small { margin-left: auto; text-align: right; }
+}
