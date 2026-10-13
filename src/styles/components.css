@@ -201,3 +201,38 @@ ul.danger-text { margin-left: 20px; }
     .config-grid { grid-template-columns: 1fr; }
     .section-toolbar { flex-wrap: wrap; }
 }
+
+/* ---- Icono de la app (el mismo PNG del icono instalado) ---- */
+.sidebar-header h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.brand-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.loading-icon {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 20px;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(102,126,234,0.35);
+}
+
+@media (max-height: 700px) {
+    .brand-icon { width: 30px; height: 30px; border-radius: 8px; }
+}
+
+/* Menú móvil (ancho ~260px): título más compacto para que no choque con el botón de cerrar */
+@media (max-width: 768px) {
+    .sidebar-header { padding-left: 16px; padding-right: 14px; gap: 8px; }
+    .sidebar-header h1 { font-size: 23px; gap: 8px; justify-content: flex-start; }
+    .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
+}

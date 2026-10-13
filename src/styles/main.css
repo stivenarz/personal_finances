@@ -1200,10 +1200,15 @@ body {
         height: calc(100dvh - env(safe-area-inset-top));
         z-index: 999;
         transform: translateX(-100%);
+        /* Cerrado: fuera del renderizado (tras la animación) para que iOS no lo tome en cuenta */
+        visibility: hidden;
+        transition: transform 0.3s ease, visibility 0s linear 0.3s;
     }
 
     .sidebar.open {
         transform: translateX(0);
+        visibility: visible;
+        transition: transform 0.3s ease, visibility 0s;
         box-shadow: 2px 0 15px rgba(0,0,0,0.2);
     }
 
@@ -1214,14 +1219,19 @@ body {
         background: rgba(0,0,0,0.5);
         z-index: 998;
         opacity: 0;
+        /* Cerrado: visibility hidden (no sólo opacity 0). En iOS la barra de estado se tiñe con el color de los
+           elementos fijos pegados al borde superior; con opacity 0 el overlay oscuro seguía tiñéndola. */
+        visibility: hidden;
         pointer-events: none;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease, visibility 0s linear 0.3s;
         touch-action: none;
     }
 
     .sidebar-overlay.open {
         opacity: 1;
+        visibility: visible;
         pointer-events: auto;
+        transition: opacity 0.3s ease, visibility 0s;
     }
 
     .sidebar-close {
