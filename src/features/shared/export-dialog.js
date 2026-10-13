@@ -1,11 +1,9 @@
-/**
- * Diálogo del botón "Exportar": elige el formato y delega en el servicio de exportación.
- */
 import { openFormModal } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
 import { uiState } from '../../core/state.js';
 import { FORMATS, exportReport } from '../../services/export-service.js';
 
+/** Diálogo para elegir el formato (CSV, Excel o PDF) y exportar el mes seleccionado. */
 export function openExportDialog() {
     openFormModal({
         title: 'Exportar reporte',

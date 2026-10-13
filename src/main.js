@@ -1,14 +1,3 @@
-/**
- * PUNTO DE ENTRADA — Finanzas Personales
- *
- * Arranque:
- *  1. DataService carga los datos locales y se conecta (en segundo plano) con el
- *     proveedor elegido: local, Firebase o Google Sheets.
- *  2. Se registran las vistas (cada una es un componente en src/features/).
- *  3. Cuando el primer sync con la nube termina se ejecuta la migración a
- *     totales calculados (si hace falta).
- *  4. Cada cambio de datos (local o remoto) vuelve a pintar la vista activa.
- */
 import { DataService } from './services/data-service.js';
 import { registerView, showView, renderActive, setupNavigation } from './core/router.js';
 import { setupMobileMenu } from './core/menu.js';

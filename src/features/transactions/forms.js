@@ -1,7 +1,3 @@
-/**
- * Formularios modales de movimientos (alta y edición).
- * Son los únicos formularios para crear/editar gastos, ingresos y pagos.
- */
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
 import { todayStr, formatMoney } from '../../core/utils.js';
@@ -11,8 +7,9 @@ import {
 } from '../../domain/transactions.js';
 import { accountOptions, categoryOptions, INCOME_TYPES } from '../shared/options.js';
 
-const result = (outcome) => (outcome.error ? outcome.error : null);
+const result = (outcome) => outcome.error || null;
 
+/** Formulario modal de gasto: alta, o edición si se pasa `transaction`. `accountId` preselecciona la cuenta o tarjeta. */
 export function openExpenseForm({ transaction = null, accountId = '' } = {}) {
     const editing = !!transaction;
     openFormModal({
@@ -42,6 +39,7 @@ export function openExpenseForm({ transaction = null, accountId = '' } = {}) {
     });
 }
 
+/** Formulario modal de ingreso: alta, o edición si se pasa `transaction`. */
 export function openIncomeForm({ transaction = null } = {}) {
     const editing = !!transaction;
     openFormModal({
@@ -121,6 +119,7 @@ export function openEditTransaction(transaction) {
     });
 }
 
+/** Pide confirmación y elimina el movimiento. Devuelve `true` si se eliminó. */
 export async function confirmDeleteTransaction(transaction) {
     if (transaction.virtual) {
         showNotification('Los intereses de tarjeta se calculan automáticamente y no se eliminan', 'info');
@@ -142,4 +141,3 @@ export async function confirmDeleteTransaction(transaction) {
     showNotification('🗑️ Movimiento eliminado', 'success');
     return true;
 }
-

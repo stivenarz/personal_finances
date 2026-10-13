@@ -1,6 +1,3 @@
-/**
- * Vista GASTOS: listado con filtros y alta/edición en modal.
- */
 import { DataService } from '../../services/data-service.js';
 import { allTransactions } from '../../domain/ledger.js';
 import { escapeHtml, formatNumber, formatDate } from '../../core/utils.js';
@@ -10,6 +7,7 @@ import { categoryLabel } from '../shared/options.js';
 
 let root;
 
+/** Vista Gastos: listado con filtros; alta y edición en modal. */
 export function mount(container) {
     root = container;
     root.innerHTML = `

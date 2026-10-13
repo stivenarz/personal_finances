@@ -1,7 +1,3 @@
-/**
- * Vista DASHBOARD: KPIs del mes, gráficos, presupuesto, próximos pagos y metas.
- * Todos los totales provienen de domain/ledger.js (calculados, nunca guardados).
- */
 import { DataService } from '../../services/data-service.js';
 import { uiState } from '../../core/state.js';
 import { escapeHtml, formatNumber, formatDate, diffDays, todayStr } from '../../core/utils.js';
@@ -35,6 +31,7 @@ function resetCharts() {
     });
 }
 
+/** Vista Dashboard: KPIs del mes, gráficos, presupuesto vs gasto real, próximos pagos y metas. */
 export function mount(container) {
     root = container;
     onThemeChange(() => {
@@ -150,8 +147,6 @@ function renderGoals() {
     }).join('') || '<p class="empty-state">No hay metas establecidas</p>';
 }
 
-// ---------------------------------------------------------------- gráficos
-
 function upsertChart(key, canvasKey, config) {
     if (typeof Chart === 'undefined') return;
     Chart.defaults.color = cssVar('--text-secondary');
@@ -197,4 +192,3 @@ function renderCharts(transactions) {
         options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 }
-

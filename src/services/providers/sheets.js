@@ -1,25 +1,7 @@
-/**
- * PROVEEDOR GOOGLE SHEETS (Google Apps Script como backend)
- *
- * Contrato idéntico al de providers/firebase.js (ver data-service.js).
- *
- * Protocolo con google-apps-script/Code.gs:
- *   GET  ?action=ping                  -> { ok, app, version }
- *   GET  ?action=pull&since=<seq>      -> { ok, version, rows:[{c,id,updatedAt,deleted,seq,data}] }
- *   POST (text/plain) {action:'batch', ops:[{op,c,id,data|fields,updatedAt}]} -> { ok, version }
- *
- * - `seq` es un contador del servidor que crece con cada escritura: permite que
- *   todos los dispositivos reciban los cambios incrementalmente aunque sus relojes
- *   difieran. La resolución de conflictos (último `updatedAt` gana) la hace el servidor.
- * - Las escrituras van a una cola persistente (localStorage) y se reintentan hasta
- *   que el servidor las confirma; las operaciones son idempotentes.
- * - "En vivo": sondeo cada POLL_VISIBLE_MS con la pestaña visible, e inmediato al
- *   volver a primer plano o recuperar la conexión.
- */
 import { COLLECTIONS } from '../collections.js';
 
-export const POLL_VISIBLE_MS = 4000;
-export const POLL_HIDDEN_MS = 60000;
+const POLL_VISIBLE_MS = 4000;
+const POLL_HIDDEN_MS = 60000;
 const OUTBOX_KEY = 'sheets_outbox';
 const BATCH_SIZE = 40;
 
@@ -180,7 +162,7 @@ async function cycle() {
 function enqueue(op) {
     const last = outbox[outbox.length - 1];
     if (last && last.op === 'save' && op.op === 'save' && last.c === op.c && last.id === op.id) {
-        outbox[outbox.length - 1] = op; // la última versión completa reemplaza a la anterior
+        outbox[outbox.length - 1] = op;
     } else {
         outbox.push(op);
     }
@@ -198,6 +180,21 @@ function addListener(target, name, fn) {
     listeners.push(() => target?.removeEventListener?.(name, fn));
 }
 
+/**
+ * Google Sheets a través de un Apps Script (google-apps-script/Code.gs).
+ *
+ * Protocolo:
+ *   GET  ?action=ping                 → { ok, app, version }
+ *   GET  ?action=pull&since=<seq>     → { ok, version, rows: [{ c, id, updatedAt, deleted, seq, data }] }
+ *   POST (text/plain) { action: 'batch', ops: [{ op: 'save'|'patch'|'remove', c, id, data|fields, updatedAt }] }
+ *
+ * `seq` es un contador del servidor: cada dispositivo recibe sólo lo nuevo aunque sus relojes difieran.
+ * Las escrituras van a una cola persistente que se reintenta hasta que el servidor la confirma, y el
+ * servidor las aplica de forma idempotente (gana el `updatedAt` más reciente). La sincronización "en vivo"
+ * es un sondeo periódico, inmediato al volver a primer plano o recuperar la conexión.
+ *
+ * @type {import('../data-service.js').Provider}
+ */
 export default {
     name: 'sheets',
 
@@ -206,7 +203,7 @@ export default {
         storageImpl = options.storage || null;
         url = options.config.sheets.url;
         outbox = loadOutbox();
-        cursor = 0;            // siempre un primer pull completo: da el índice remoto para reconciliar
+        cursor = 0;
         readyFired = false;
         lastError = null;
         connected = true;
@@ -266,10 +263,5 @@ export default {
         } catch (error) {
             return { success: false, message: 'Error: ' + error.message };
         }
-    },
-
-    /** Sólo para pruebas. */
-    _state() {
-        return { outbox: outbox.length, cursor, readyFired };
     }
 };

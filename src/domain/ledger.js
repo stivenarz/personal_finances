@@ -1,32 +1,19 @@
-/**
- * LEDGER — todos los totales se CALCULAN aquí a partir de los registros base.
- *
- *   saldo de cuenta   = saldo inicial + efecto de cada movimiento (− intereses de TC)
- *   avance de meta    = base + abonos − retiros
- *   saldo de deuda    = base − pagos
- *   tarjeta de crédito: cupo usado/disponible, intereses por ciclo, fecha de pago
- *
- * Nada de esto se guarda en la base de datos: así dos dispositivos que editen al
- * mismo tiempo nunca pueden "desincronizar" un saldo.
- *
- * Compatibilidad: los registros anteriores a esta versión traen el total guardado
- * (`balance`, `currentAmount`, `currentBalance`). Mientras no se haya ejecutado la
- * migración (domain/migrations.js) se usa ese valor; después se ignora.
- */
 import { DataService } from '../services/data-service.js';
 import { money, todayStr, dateInMonth, nextDateForDay, diffDays } from '../core/utils.js';
 
 export const CREDIT_TYPE = 'Tarjeta Crédito';
 export const ACCOUNT_TYPES = ['Corriente', CREDIT_TYPE, 'Efectivo', 'Ahorros', 'Otro'];
-export const INTEREST_CATEGORY = 'Interés';
+const INTEREST_CATEGORY = 'Interés';
 
 export const isCreditCard = (account) => account?.type === CREDIT_TYPE;
-
-// ---------------------------------------------------------------- caché por versión de datos
 
 let cache = null;
 let cacheKey = '';
 
+/**
+ * Contexto de cálculo cacheado: se reconstruye cuando cambian los datos (DataService.version) o el día.
+ * Evita recalcular saldos, tarjetas, metas y deudas en cada llamada.
+ */
 function context() {
     const key = `${DataService.version}|${todayStr()}`;
     if (cache && key === cacheKey) return cache;
@@ -48,15 +35,14 @@ function context() {
     return cache;
 }
 
-/** Fuerza el recálculo (sólo para pruebas). */
+/** Gancho de pruebas: descarta el caché de cálculos. */
 export function resetLedgerCache() {
     cache = null;
     cacheKey = '';
 }
 
-// ---------------------------------------------------------------- efectos de movimientos
-
-export function transferDestinationId(t, ctx = context()) {
+/** Cuenta destino de una transferencia: `toAccount`, o el nombre dentro de la descripción en datos antiguos. */
+function transferDestinationId(t, ctx = context()) {
     if (t.toAccount) return t.toAccount;
     const match = (t.description || '').match(/^Transferencia de (.+?) a (.+?)(:|$)/);
     return match ? ctx.accountsByName.get(match[2])?.id || null : null;
@@ -76,14 +62,17 @@ export function effectOn(t, accountId, ctx = context()) {
     return 0;
 }
 
-// ---------------------------------------------------------------- tarjetas de crédito
-
+/**
+ * Tasa mensual en fracción (0.02 = 2 %).
+ * @param {'mensual'|'anual'} type 'mensual' nominal, o efectiva anual (se convierte con (1+EA)^(1/12)−1).
+ */
 export function monthlyRate(rate, type) {
     const value = Number(rate) || 0;
     if (type === 'anual') return Math.pow(1 + value / 100, 1 / 12) - 1;
     return value / 100;
 }
 
+/** Tasa vigente en una fecha según el historial de cambios de la tarjeta (`rateHistory`). */
 function rateEntryAt(account, dateStr) {
     const history = (account.rateHistory && account.rateHistory.length)
         ? [...account.rateHistory].sort((a, b) => a.from.localeCompare(b.from))
@@ -93,8 +82,8 @@ function rateEntryAt(account, dateStr) {
     return chosen;
 }
 
-/** Fechas de un ciclo: corte y límite de pago (el pago cae el mismo mes si el día es posterior al corte). */
-export function cycleDates(account, year, month) {
+/** Fecha de corte y fecha límite de pago de un ciclo (el pago cae el mismo mes si su día es posterior al del corte). */
+function cycleDates(account, year, month) {
     const cutoff = dateInMonth(year, month, account.cutoffDay || 1);
     const payDay = account.paymentDay || account.cutoffDay || 1;
     const due = payDay > (account.cutoffDay || 1)
@@ -110,10 +99,10 @@ function interestStartOf(account, realTxns) {
 }
 
 /**
- * Intereses de una tarjeta. Modelo: al corte se fija el saldo del extracto; los
- * pagos recibidos entre el corte y la fecha límite lo reducen; sobre lo que
- * queda sin pagar se cobra la tasa del corte, que se carga en la fecha límite.
- * Pagar el extracto completo a tiempo = sin intereses.
+ * Intereses de una tarjeta, ciclo a ciclo: al corte se fija el saldo del extracto; los pagos recibidos
+ * entre el corte y la fecha límite lo reducen; sobre lo que queda sin pagar se cobra la tasa del corte,
+ * que se carga en la fecha límite. Pagar el extracto completo a tiempo no genera intereses.
+ * @returns {{balance: number, entries: Array, cycles: Array}} saldo final (negativo = deuda), intereses cargados y ciclos
  */
 function computeCard(account, ctx) {
     const today = todayStr();
@@ -126,7 +115,7 @@ function computeCard(account, ctx) {
         if (e !== 0) effects.push({ date: t.date || '', e });
     });
 
-    const entries = []; // intereses ya cargados
+    const entries = [];
     const balanceAt = (date) => {
         let balance = initial;
         effects.forEach(x => { if (x.date <= date) balance += x.e; });
@@ -168,7 +157,7 @@ function cardData(account, ctx = context()) {
     return ctx.cards.get(account.id);
 }
 
-/** Intereses de tarjetas como movimientos virtuales (no se guardan; se recalculan). */
+/** Intereses cargados a las tarjetas como movimientos virtuales: no se guardan, se recalculan. */
 function virtualInterest(ctx) {
     const result = [];
     DataService.all('accounts').filter(isCreditCard).forEach(account => {
@@ -196,8 +185,10 @@ export function allTransactions() {
     return ctx.all;
 }
 
-// ---------------------------------------------------------------- cuentas
-
+/**
+ * Saldo = saldo inicial + efecto de cada movimiento (en tarjetas, además, los intereses cargados; negativo = deuda).
+ * Las cuentas anteriores a la migración usan el saldo guardado.
+ */
 export function accountBalance(accountId) {
     const ctx = context();
     if (ctx.balances.has(accountId)) return ctx.balances.get(accountId);
@@ -206,7 +197,7 @@ export function accountBalance(accountId) {
     let balance = 0;
     if (account) {
         if (account.initialBalance === undefined) {
-            balance = money(account.balance); // dato anterior a la migración
+            balance = money(account.balance);
         } else if (isCreditCard(account)) {
             balance = cardData(account, ctx).balance;
         } else {
@@ -219,7 +210,10 @@ export function accountBalance(accountId) {
     return balance;
 }
 
-/** Dinero que se puede gastar: saldo (o cupo disponible en tarjetas). */
+/**
+ * Dinero que se puede gastar: saldo, o cupo disponible en tarjetas.
+ * `excludeTxId` ignora un movimiento (para validar su edición).
+ */
 export function accountAvailable(accountId, { excludeTxId = null } = {}) {
     const ctx = context();
     const account = ctx.accountsById.get(accountId);
@@ -244,6 +238,10 @@ export function totalCreditDebt() {
         .reduce((sum, a) => sum + Math.max(0, -accountBalance(a.id)), 0));
 }
 
+/**
+ * Estado completo de una tarjeta: cupo usado y disponible, tasa vigente, corte, fecha límite de pago,
+ * lo que hay que pagar para no generar intereses y los intereses ya cargados. `null` si no es tarjeta.
+ */
 export function creditCardInfo(accountId) {
     const ctx = context();
     const account = ctx.accountsById.get(accountId);
@@ -256,7 +254,6 @@ export function creditCardInfo(accountId) {
     const entry = rateEntryAt(account, today);
     const data = account.initialBalance === undefined ? { cycles: [], entries: [] } : cardData(account, ctx);
 
-    // Ciclo vigente: el primero cuya fecha límite de pago aún no pasa
     const [year, month] = today.split('-').map(Number);
     let target = null;
     for (const offset of [-1, 0, 1]) {
@@ -271,8 +268,6 @@ export function creditCardInfo(accountId) {
     if (statementClosed && computed) {
         amountToAvoidInterest = computed.unpaid;
         estimatedInterest = computed.interest;
-    } else if (!statementClosed) {
-        estimatedInterest = 0;
     }
 
     return {
@@ -295,8 +290,7 @@ export function creditCardInfo(accountId) {
     };
 }
 
-// ---------------------------------------------------------------- metas
-
+/** Abonos menos retiros de cada meta. */
 function goalTotals(ctx) {
     if (!ctx.goalTotals) {
         const totals = new Map();
@@ -322,8 +316,9 @@ export function goalIdForTransaction(t) {
     return DataService.all('goals').find(g => g.description === name)?.id || null;
 }
 
+/** Avance de una meta = base + abonos − retiros (las anteriores a la migración usan el monto guardado). */
 export function goalAmount(goal) {
-    if (goal.baseAmount === undefined && goal.currentAmount !== undefined) return money(goal.currentAmount); // pre-migración
+    if (goal.baseAmount === undefined && goal.currentAmount !== undefined) return money(goal.currentAmount);
     return money((Number(goal.baseAmount) || 0) + (goalTotals(context()).get(goal.id) || 0));
 }
 
@@ -331,16 +326,7 @@ export function totalSavings() {
     return money(DataService.all('goals').reduce((sum, g) => sum + goalAmount(g), 0));
 }
 
-// ---------------------------------------------------------------- deudas
-//
-// Una deuda guarda sólo: capital base (`baseBalance`), tasa anual, plazo, fecha de
-// inicio y desde cuándo causa intereses (`interestFrom`). Todo lo demás se calcula:
-//   - cada pago cubre primero los intereses causados y el resto abona a capital
-//   - saldo pendiente = capital + intereses causados a hoy
-//   - cuota sugerida = cuota francesa sobre el saldo pendiente y los meses que faltan
-//     (si abonas de más, el saldo baja y la cuota se recalcula sola)
-// Sin `interestFrom` (datos anteriores a esta versión) no se causan intereses.
-
+/** Fecha centinela: una deuda sin `interestFrom` (datos anteriores) no causa intereses. */
 const NEVER = '9999-12-31';
 
 function debtPaidTotals(ctx) {
@@ -360,7 +346,7 @@ export function debtPaid(debt) {
 }
 
 /** Meses (con fracción: días/30) entre dos fechas YYYY-MM-DD. */
-export function monthsBetween(from, to) {
+function monthsBetween(from, to) {
     if (to <= from) return 0;
     const [fy, fm, fd] = from.split('-').map(Number);
     const [ty, tm, td] = to.split('-').map(Number);
@@ -370,6 +356,10 @@ export function monthsBetween(from, to) {
     return whole + diffDays(anchor, to) / 30;
 }
 
+/**
+ * Amortiza la deuda cronológicamente: los intereses se causan sobre el capital desde `interestFrom`;
+ * cada pago cubre primero los intereses y el resto abona a capital.
+ */
 function debtState(debt, ctx = context()) {
     if (!ctx.debtStates) ctx.debtStates = new Map();
     if (ctx.debtStates.has(debt.id)) return ctx.debtStates.get(debt.id);
@@ -389,7 +379,7 @@ function debtState(debt, ctx = context()) {
     payments.forEach(p => {
         const amount = Number(p.amount) || 0;
         if (monthly === 0 || (p.date || '') < from) {
-            capital = Math.max(0, capital - amount); // sin intereses: todo es capital
+            capital = Math.max(0, capital - amount);
             return;
         }
         accrued += capital * monthly * monthsBetween(last, p.date);
@@ -412,9 +402,9 @@ function debtState(debt, ctx = context()) {
     return state;
 }
 
-/** Saldo pendiente (capital + intereses causados). */
+/** Saldo pendiente = capital + intereses causados (las deudas anteriores a la migración usan el saldo guardado). */
 export function debtBalance(debt) {
-    if (debt.baseBalance === undefined && debt.currentBalance !== undefined) return money(debt.currentBalance); // pre-migración
+    if (debt.baseBalance === undefined && debt.currentBalance !== undefined) return money(debt.currentBalance);
     return debtState(debt).balance;
 }
 
@@ -470,7 +460,7 @@ export function debtMonthsLeft(debt) {
     if (payment <= 0) return null;
     const monthly = (Number(debt.interestRate) || 0) / 1200;
     if (monthly > 0) {
-        if (payment <= balance * monthly) return null; // la cuota no cubre ni los intereses
+        if (payment <= balance * monthly) return null;
         return Math.ceil(-Math.log(1 - balance * monthly / payment) / Math.log(1 + monthly));
     }
     return Math.ceil(balance / payment);

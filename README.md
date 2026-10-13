@@ -48,7 +48,7 @@ src/
 │                            debts, savings, planning, transactions, categories, settings
 └── styles/                  main.css · components.css
 google-apps-script/Code.gs   backend de Google Sheets
-docs/                        guías (Firebase, Google Sheets, PWA) y arquitectura de sincronización
+docs/                        guías (Firebase, Google Sheets, PWA; guide.css y guide.js compartidos) y arquitectura de sincronización
 tests/                       pruebas (node --test)
 ```
 

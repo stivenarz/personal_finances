@@ -1,15 +1,8 @@
-/**
- * Reglas de negocio de las cuentas (incluye tarjetas de crédito).
- *
- * Una tarjeta guarda: cupo (`creditLimit`), tasa (`interestRate` + `rateType`:
- * 'mensual' nominal o 'anual' efectiva), día de corte y día de pago. Los cambios
- * de tasa quedan en `rateHistory` con su fecha de vigencia, de modo que un cambio
- * futuro no reescribe los intereses ya cargados.
- */
 import { DataService } from '../services/data-service.js';
 import { uid, money, todayStr, formatMoney } from '../core/utils.js';
-import { accountBalance, creditCardInfo, isCreditCard, CREDIT_TYPE } from './ledger.js';
+import { accountBalance, isCreditCard, CREDIT_TYPE } from './ledger.js';
 
+/** Devuelve `{ ok: true, record }` o `{ error: 'mensaje' }`. */
 const fail = (error) => ({ error });
 const validDay = (day) => Number.isInteger(day) && day >= 1 && day <= 31;
 
@@ -22,6 +15,10 @@ function validateCard(values) {
     return null;
 }
 
+/**
+ * Crea una cuenta. En tarjetas de crédito `usedCredit` (cupo ya utilizado) se guarda como saldo inicial negativo
+ * y los intereses empiezan a calcularse desde hoy.
+ */
 export function createAccount(values) {
     const name = (values.name || '').trim();
     if (!name) return fail('❌ El nombre no puede estar vacío');
@@ -48,6 +45,10 @@ export function createAccount(values) {
     return { ok: true, record };
 }
 
+/**
+ * Edita una cuenta. Si cambia la tasa de una tarjeta, la nueva rige desde hoy y la anterior queda en
+ * `rateHistory`, de modo que los intereses ya cargados no cambian.
+ */
 export function updateAccount(account, values) {
     const name = (values.name || '').trim();
     if (!name) return fail('❌ El nombre no puede estar vacío');
@@ -70,7 +71,6 @@ export function updateAccount(account, values) {
 
     const rate = Number(values.interestRate);
     if (rate !== Number(account.interestRate) || values.rateType !== account.rateType) {
-        // La nueva tasa rige desde hoy; lo anterior se conserva en el historial
         const today = todayStr();
         const history = (account.rateHistory && account.rateHistory.length)
             ? account.rateHistory.filter(e => e.from < today)
@@ -126,8 +126,4 @@ export function deleteAccount(account, destinationId = null) {
 
     DataService.remove('accounts', account.id);
     return { ok: true };
-}
-
-export function cardSummary(accountId) {
-    return creditCardInfo(accountId);
 }

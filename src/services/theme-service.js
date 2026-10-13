@@ -1,15 +1,3 @@
-/**
- * THEME SERVICE — modo claro / oscuro / automático.
- *
- * La preferencia ('auto' | 'light' | 'dark') vive en el localStorage del dispositivo (cada dispositivo
- * puede tener su propio modo; no se sincroniza con la nube). En 'auto' se sigue el modo del sistema
- * (prefers-color-scheme) y se actualiza en vivo si el sistema cambia.
- *
- * El tema resuelto ('light' | 'dark') se aplica como `data-theme` en <html>; el CSS redefine sus
- * variables para el modo oscuro (ver components.css). Un script mínimo en el <head> de index.html lo
- * aplica antes del primer pintado para evitar el "parpadeo" en claro.
- */
-
 const KEY = 'finanzas_theme';
 const META_COLORS = { light: '#667eea', dark: '#1e1b4b' };
 
@@ -31,6 +19,7 @@ function storage() {
     }
 }
 
+/** @returns {'auto'|'light'|'dark'} Preferencia guardada en este dispositivo (por defecto 'auto'). */
 export function getThemePreference() {
     try {
         const saved = storage()?.getItem(KEY);
@@ -40,22 +29,23 @@ export function getThemePreference() {
     }
 }
 
-export function systemPrefersDark() {
+function systemPrefersDark() {
     return !!globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches;
 }
 
 /** Tema efectivo ('light' | 'dark') para una preferencia dada. */
-export function resolveTheme(preference = getThemePreference()) {
+function resolveTheme(preference = getThemePreference()) {
     if (preference === 'dark' || preference === 'light') return preference;
     return systemPrefersDark() ? 'dark' : 'light';
 }
 
+/** @returns {'light'|'dark'} Tema que se está mostrando. */
 export function getResolvedTheme() {
     return resolved || resolveTheme();
 }
 
 /** Aplica el tema al documento y avisa a los suscriptores si cambió. */
-export function applyTheme() {
+function applyTheme() {
     const next = resolveTheme();
     const changed = next !== resolved;
     resolved = next;
@@ -74,6 +64,7 @@ export function applyTheme() {
     return next;
 }
 
+/** Guarda la preferencia y aplica el tema. Ignora valores no válidos. */
 export function setThemePreference(preference) {
     if (!THEME_OPTIONS.some(o => o.value === preference)) return getThemePreference();
     try {
@@ -92,16 +83,17 @@ export function initTheme() {
         mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
         const onSystemChange = () => { if (getThemePreference() === 'auto') applyTheme(); };
         if (mediaQuery.addEventListener) mediaQuery.addEventListener('change', onSystemChange);
-        else mediaQuery.addListener?.(onSystemChange); // Safari antiguo
+        else mediaQuery.addListener?.(onSystemChange);
     }
 }
 
+/** Suscribe a cambios del tema efectivo; devuelve la función para cancelar. */
 export function onThemeChange(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
 }
 
-/** Sólo para pruebas. */
+/** Gancho de pruebas: reinicia el estado interno. */
 export function _resetTheme() {
     resolved = null;
     mediaQuery = null;

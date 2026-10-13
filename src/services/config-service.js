@@ -1,8 +1,3 @@
-/**
- * Configuración de la app (proveedor de datos y credenciales).
- * Vive SOLO en localStorage del dispositivo: nunca se sube a la nube.
- */
-
 const KEY = 'finanzas_config';
 
 export const PROVIDERS = {
@@ -31,22 +26,25 @@ function readJson(key) {
     }
 }
 
-export function isFirebaseConfigured(cfg) {
+function isFirebaseConfigured(cfg) {
     return !!(cfg && cfg.apiKey && cfg.projectId && cfg.authDomain);
 }
 
-/** URL de despliegue de Apps Script (se admite localhost sólo para desarrollo y pruebas). */
+/** URL de despliegue de Apps Script; se admite localhost para desarrollo y pruebas. */
 export const SHEETS_URL_PATTERN = /^(https:\/\/script\.google(usercontent)?\.com\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/)/;
 
-export function isSheetsConfigured(cfg) {
+function isSheetsConfigured(cfg) {
     return !!(cfg && SHEETS_URL_PATTERN.test(cfg.url || ''));
 }
 
+/**
+ * Configuración del dispositivo (proveedor y credenciales). Si aún no existe, la deriva de las claves
+ * de versiones anteriores (`firebaseConfig`, `gasScriptUrl`).
+ */
 export function getConfig() {
     let saved = readJson(KEY);
 
     if (!saved) {
-        // Migración desde versiones anteriores (claves sueltas)
         const legacyFirebase = readJson('firebaseConfig');
         const legacyScriptUrl = storage()?.getItem('gasScriptUrl') || '';
         saved = {
@@ -63,6 +61,7 @@ export function getConfig() {
     };
 }
 
+/** Fusiona `partial` (primer nivel) con la configuración guardada y la persiste. */
 export function saveConfig(partial) {
     const next = { ...getConfig(), ...partial };
     try {

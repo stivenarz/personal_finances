@@ -1,10 +1,3 @@
-/**
- * Reglas de negocio de los movimientos (crear / editar / eliminar).
- *
- * Como los saldos se calculan (ledger.js), aquí NO se ajustan saldos: basta con
- * guardar o corregir el movimiento y todo lo demás se recalcula solo.
- * Cada función devuelve { error } o { ok: true, record }.
- */
 import { DataService } from '../services/data-service.js';
 import { uid, money, todayStr, formatMoney } from '../core/utils.js';
 import {
@@ -12,16 +5,19 @@ import {
     goalIdForTransaction, isCreditCard
 } from './ledger.js';
 
+/**
+ * Las operaciones de este módulo devuelven `{ ok: true, record }` o `{ error: 'mensaje' }`.
+ * Como los saldos se calculan (ledger.js), crear, editar o borrar un movimiento no ajusta ningún saldo.
+ */
 const fail = (error) => ({ error });
 const valid = (amount) => Number.isFinite(amount) && amount > 0;
 
 function insufficient(account, available, needed) {
-    if (isCreditCard(account)) {
-        return `❌ Cupo insuficiente en ${account.name}. Disponible: ${formatMoney(available)}, requerido: ${formatMoney(needed)}`;
-    }
-    return `❌ Saldo insuficiente en ${account.name}. Disponible: ${formatMoney(available)}, requerido: ${formatMoney(needed)}`;
+    const noun = isCreditCard(account) ? 'Cupo' : 'Saldo';
+    return `❌ ${noun} insuficiente en ${account.name}. Disponible: ${formatMoney(available)}, requerido: ${formatMoney(needed)}`;
 }
 
+/** Valida que la cuenta tenga fondos (o cupo) para `amount`; devuelve el mensaje de error o `null`. */
 function checkFunds(accountId, amount, excludeTxId = null) {
     const account = DataService.find('accounts', accountId);
     if (!account) return '❌ Cuenta no encontrada';
@@ -29,8 +25,6 @@ function checkFunds(accountId, amount, excludeTxId = null) {
     if (available < amount) return insufficient(account, available, amount);
     return null;
 }
-
-// ---------------------------------------------------------------- crear
 
 export function createExpense({ date, category, description, amount, account }) {
     amount = money(amount);
@@ -60,6 +54,7 @@ export function createIncome({ date, incomeType, description, amount, account })
     return { ok: true, record };
 }
 
+/** Transferencia entre cuentas. Si el destino es una tarjeta funciona como pago de tarjeta y no puede superar su deuda. */
 export function createTransfer({ from, to, amount, date, description }) {
     amount = money(amount);
     const origin = DataService.find('accounts', from);
@@ -88,6 +83,7 @@ export function createTransfer({ from, to, amount, date, description }) {
     return { ok: true, record };
 }
 
+/** Abono a una meta: sale de una cuenta como movimiento de tipo 'Ahorro' vinculado por `goalId`. */
 export function createGoalDeposit({ goalId, account, amount, date }) {
     amount = money(amount);
     const goal = DataService.find('goals', goalId);
@@ -106,6 +102,7 @@ export function createGoalDeposit({ goalId, account, amount, date }) {
     return { ok: true, record };
 }
 
+/** Retiro de una meta hacia una cuenta, hasta lo ahorrado en ella. */
 export function createGoalWithdrawal({ goalId, account, amount, date }) {
     amount = money(amount);
     const goal = DataService.find('goals', goalId);
@@ -124,6 +121,7 @@ export function createGoalWithdrawal({ goalId, account, amount, date }) {
     return { ok: true, record };
 }
 
+/** Pago de deuda: registra el egreso y el pago vinculados; no puede superar el saldo pendiente (intereses incluidos). */
 export function createDebtPayment({ debtId, account, amount, date }) {
     amount = money(amount);
     const debt = DataService.find('debts', debtId);
@@ -149,9 +147,8 @@ export function createDebtPayment({ debtId, account, amount, date }) {
     return { ok: true, record: transaction };
 }
 
-// ---------------------------------------------------------------- editar / eliminar
-
-export function debtPaymentForTransaction(t) {
+/** Pago de deuda ligado a un movimiento; en datos antiguos sin vínculo se busca por monto, fecha y cuenta. */
+function debtPaymentForTransaction(t) {
     const payments = DataService.all('debtPayments');
     const linked = payments.find(p => p.transactionId === t.id);
     if (linked) return linked;
@@ -169,6 +166,7 @@ export function describeTransaction(t) {
     return { isDebtPayment, isGoalMovement, isTransfer, isSystem: !!t.virtual };
 }
 
+/** Corrige un movimiento validando fondos y límites; si es un pago de deuda actualiza también el pago. */
 export function updateTransaction(t, values) {
     if (t.virtual) return fail('❌ Los intereses de tarjeta se calculan automáticamente');
     const { isDebtPayment, isGoalMovement, isTransfer } = describeTransaction(t);
@@ -208,8 +206,7 @@ export function updateTransaction(t, values) {
     }
 
     const patch = { date: values.date ?? t.date, amount, account: accountId };
-    if (values.description !== undefined && !isDebtPayment && !isGoalMovement && !isTransfer) patch.description = values.description;
-    if (isTransfer && values.description !== undefined) patch.description = values.description;
+    if (values.description !== undefined && !isDebtPayment && !isGoalMovement) patch.description = values.description;
     if (values.category !== undefined) patch.category = values.category;
     if (values.incomeType !== undefined) patch.incomeType = values.incomeType;
 
@@ -224,6 +221,7 @@ export function updateTransaction(t, values) {
     return { ok: true };
 }
 
+/** Elimina un movimiento y, si es un pago de deuda, el pago asociado. */
 export function deleteTransaction(t) {
     if (t.virtual) return fail('❌ Los intereses de tarjeta se calculan automáticamente');
     const payment = debtPaymentForTransaction(t);
@@ -231,4 +229,3 @@ export function deleteTransaction(t) {
     DataService.remove('transactions', t.id);
     return { ok: true };
 }
-

@@ -1,7 +1,3 @@
-/**
- * Vista CATEGORÍAS (componente independiente): categorías de egresos e ingresos con su presupuesto
- * mensual. Alta y edición en modal.
- */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
@@ -10,6 +6,7 @@ import { sectionToolbar, emptyState, onActions } from '../../core/ui.js';
 
 let root;
 
+/** Vista Categorías: categorías de egresos e ingresos con su presupuesto mensual. */
 export function mount(container) {
     root = container;
     root.innerHTML = `

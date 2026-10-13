@@ -1,7 +1,3 @@
-/**
- * Vista CUENTAS (componente independiente): cuentas bancarias, efectivo, ahorros
- * y tarjetas de crédito. Los saldos y el estado de las tarjetas se calculan.
- */
 import { DataService } from '../../services/data-service.js';
 import { escapeHtml, formatMoney, formatDate } from '../../core/utils.js';
 import { sectionToolbar, emptyState, onActions } from '../../core/ui.js';
@@ -11,6 +7,7 @@ import { openAccountForm, openTransferForm, startAccountDeletion } from './forms
 
 let root;
 
+/** Vista Cuentas: cuentas y tarjetas de crédito con saldo, cupo, intereses y fecha de pago, todo calculado. */
 export function mount(container) {
     root = container;
     root.innerHTML = `

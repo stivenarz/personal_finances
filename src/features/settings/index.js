@@ -1,12 +1,8 @@
-/**
- * Vista CONFIGURACIÓN: apariencia (claro / oscuro / automático), base de datos
- * (local / Firebase / Google Sheets) y zona de peligro.
- * (Cuentas y Categorías tienen su propia vista.)
- */
 import { mountAppearance } from './appearance.js';
 import { mountProviderPanel } from './provider-panel.js';
 import { mountDangerZone } from './danger-zone.js';
 
+/** Vista Configuración: apariencia, base de datos y zona de peligro. */
 export function mount(container) {
     container.innerHTML = `
         <div class="config-grid">
@@ -21,5 +17,4 @@ export function mount(container) {
 }
 
 export function render() {
-    // Sin datos que repintar: la configuración es estática
 }

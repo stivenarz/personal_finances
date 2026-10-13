@@ -1,9 +1,6 @@
-/**
- * Proveedor "solo local": no hay nube, todo vive en localStorage (lo maneja DataService).
- * Implementa el mismo contrato que los demás proveedores.
- */
 const noop = () => Promise.resolve();
 
+/** Proveedor sin nube: todo vive en localStorage (lo gestiona DataService). @type {import('../data-service.js').Provider} */
 export default {
     name: 'local',
     async connect({ onStatus, onReady }) {

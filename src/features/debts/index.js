@@ -1,6 +1,3 @@
-/**
- * Vista DEUDAS. El saldo de cada deuda se calcula: base − pagos registrados.
- */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
@@ -15,6 +12,7 @@ import { accountOptions } from '../shared/options.js';
 
 let root;
 
+/** Vista Deudas: saldo con intereses, cuota sugerida calculada, pagos y progreso. */
 export function mount(container) {
     root = container;
     root.innerHTML = `
@@ -73,7 +71,6 @@ function openDebtForm(debt = null) {
             };
 
             if (debt) {
-                // El saldo se calcula; corregirlo ajusta el capital base para que el saldo de hoy sea el indicado
                 const base = debt.baseBalance ?? (debtBalance(debt) + debtPaid(debt));
                 DataService.patch('debts', debt.id, { ...fields, baseBalance: money(base + (v.balance - debtBalance(debt))) });
             } else {

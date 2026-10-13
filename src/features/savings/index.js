@@ -1,6 +1,3 @@
-/**
- * Vista AHORROS (metas). El avance de cada meta se calcula: base + abonos − retiros.
- */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
@@ -12,6 +9,7 @@ import { accountOptions } from '../shared/options.js';
 
 let root;
 
+/** Vista Ahorros: metas con abonos y retiros; el avance se calcula desde los movimientos. */
 export function mount(container) {
     root = container;
     root.innerHTML = `
@@ -64,7 +62,6 @@ function openGoalForm(goal = null) {
                 const oldName = goal.description;
                 DataService.patch('goals', goal.id, { description, targetAmount: money(v.targetAmount), deadline: v.deadline });
                 if (oldName !== description) {
-                    // Mantiene legible el historial (el vínculo real es por goalId)
                     DataService.all('transactions')
                         .filter(t => goalIdForTransaction(t) === goal.id)
                         .forEach(t => {

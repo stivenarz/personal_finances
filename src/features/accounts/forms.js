@@ -1,6 +1,3 @@
-/**
- * Formularios modales de cuentas, tarjetas de crédito y transferencias.
- */
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
 import { escapeHtml, formatMoney, formatDate, todayStr } from '../../core/utils.js';
@@ -12,6 +9,7 @@ import { accountOptions } from '../shared/options.js';
 
 const isCard = (values) => values.type === CREDIT_TYPE;
 
+/** Formulario modal de cuenta: alta, o edición si se pasa `account`. Los campos de tarjeta sólo aparecen para tarjetas de crédito. */
 export function openAccountForm(account = null) {
     const editing = !!account;
     const card = editing && isCreditCard(account);
@@ -63,9 +61,7 @@ export function openAccountForm(account = null) {
     });
 }
 
-/**
- * Transferencia entre cuentas. Con `toId` de una tarjeta funciona como "Pagar tarjeta".
- */
+/** Formulario de transferencia. Si el destino (`toId`) es una tarjeta funciona como "Pagar tarjeta". */
 export function openTransferForm({ fromId = '', toId = '' } = {}) {
     const destination = toId ? DataService.find('accounts', toId) : null;
     const payingCard = !!destination && isCreditCard(destination);
@@ -105,6 +101,7 @@ export function openTransferForm({ fromId = '', toId = '' } = {}) {
     });
 }
 
+/** Elimina una cuenta validando su saldo: con deuda se bloquea; con saldo a favor pide a qué cuenta transferirlo. */
 export async function startAccountDeletion(account) {
     const check = checkAccountDeletion(account);
 

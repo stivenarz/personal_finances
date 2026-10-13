@@ -1,7 +1,3 @@
-/**
- * Vista INGRESOS: listado con filtros y alta/edición en modal.
- * Sólo cuentan como ingreso real los registrados manualmente (la nómina del plan es proyección).
- */
 import { DataService } from '../../services/data-service.js';
 import { escapeHtml, formatNumber, formatDate } from '../../core/utils.js';
 import { sectionToolbar, emptyState, onActions } from '../../core/ui.js';
@@ -9,6 +5,7 @@ import { openIncomeForm, openEditTransaction, confirmDeleteTransaction } from '.
 
 let root;
 
+/** Vista Ingresos: listado con filtros; alta y edición en modal. Sólo los ingresos registrados manualmente cuentan como reales. */
 export function mount(container) {
     root = container;
     root.innerHTML = `

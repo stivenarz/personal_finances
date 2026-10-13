@@ -1,12 +1,3 @@
-/**
- * Modales reutilizables: formulario (crear/editar) y confirmación.
- *
- * Campo de formulario:
- *   { name, label, type: 'text'|'number'|'date'|'select', value, options, required,
- *     disabled, min, max, step, placeholder, hint, visibleIf(values) }
- * `onSubmit(values)` devuelve un string de error (o una promesa de él) para mostrarlo
- * sin cerrar el modal; cualquier otro valor cierra el modal.
- */
 import { escapeHtml } from './utils.js';
 import { showNotification } from './notifications.js';
 
@@ -47,6 +38,19 @@ function readValues(form, fields) {
     return values;
 }
 
+/**
+ * Abre un formulario modal (alta o edición).
+ *
+ * @param {Object} options
+ * @param {Array<{name: string, label: string, type?: 'text'|'number'|'date'|'select', value?: any,
+ *   options?: Array<{value: string, label: string}>, required?: boolean, disabled?: boolean,
+ *   min?: number, max?: number, step?: number, placeholder?: string, hint?: string,
+ *   visibleIf?: (values: Object) => boolean}>} options.fields
+ *   Un campo con `visibleIf` falso se oculta, no se valida y llega como `undefined`.
+ * @param {(values: Object) => (string|void|Promise<string|void>)} options.onSubmit
+ *   Si devuelve un texto, se muestra como error y el modal sigue abierto; en cualquier otro caso se cierra.
+ * @returns {{close: () => void}}
+ */
 export function openFormModal({ title, note = '', fields, submitLabel = 'Guardar', cancelLabel = 'Cancelar', danger = false, successMessage = null, onSubmit }) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -141,6 +145,7 @@ export function openFormModal({ title, note = '', fields, submitLabel = 'Guardar
     return { close };
 }
 
+/** Modal de confirmación. Resuelve `true` si se acepta y `false` si se cancela (botón, Esc o clic fuera). */
 export function confirmDialog({ title = 'Confirmar', message, confirmLabel = 'Aceptar', cancelLabel = 'Cancelar', danger = false }) {
     return new Promise(resolve => {
         const overlay = document.createElement('div');

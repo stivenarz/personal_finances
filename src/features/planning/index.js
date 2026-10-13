@@ -1,8 +1,3 @@
-/**
- * Vista PLANIFICACIÓN: ingresos fijos (proyección), gastos fijos, obligaciones
- * (deudas y tarjetas), planes de pago guardados y calendario de saldo.
- * Los ingresos fijos son sólo una proyección: el ingreso real es el registrado manualmente.
- */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
@@ -13,8 +8,7 @@ import { accountBalance, creditCardInfo, debtBalance, debtMonthlyPayment, isCred
 let root;
 const PLAN_UI = { selectedPlanId: '', draft: {} };
 
-// ---------------------------------------------------------------- cálculo
-
+/** Configuración de ingresos fijos (documento 'plan' de settings) con valores por defecto. */
 function getPlanSettings() {
     const saved = DataService.find('settings', 'plan') || {};
     return { frecuencia: 'mensual', diaCobro1: 1, diaCobro2: 15, ingresosFijos: 0, ...saved };
@@ -29,6 +23,7 @@ function clampDay(day, ym) {
     return Math.min(monthDays(ym), Math.max(1, Math.round(Number(day)) || 1));
 }
 
+/** Ingresos fijos del mes como proyección: uno mensual o dos quincenales. No son ingresos reales. */
 function projectedIncomes(ym) {
     const settings = getPlanSettings();
     const total = Number(settings.ingresosFijos) || 0;
@@ -44,6 +39,7 @@ function projectedIncomes(ym) {
     return [{ key: 'ingreso:1', day: clampDay(settings.diaCobro1, ym), amount: money(total), label: 'Ingreso mensual', kind: 'ingreso' }];
 }
 
+/** Pagos del mes: deudas (cuota sugerida), tarjetas (lo que hay que pagar para no generar intereses) y gastos fijos. */
 function plannedObligations() {
     const debts = DataService.all('debts')
         .filter(d => debtBalance(d) > 0)
@@ -84,6 +80,10 @@ function planningStartBalance() {
         .reduce((sum, a) => sum + accountBalance(a.id), 0));
 }
 
+/**
+ * Simula el saldo día a día del mes. `overrides` cambia el día de pago de cada obligación (clave → día).
+ * Devuelve las filas del calendario, el saldo mínimo y el margen del mes.
+ */
 function simulatePlan(ym, overrides) {
     const incomes = projectedIncomes(ym);
     const obligations = plannedObligations();
@@ -115,8 +115,6 @@ function realIncomeThisMonth(ym) {
         .filter(t => t.type === 'Ingreso' && t.category !== 'Retiro de Ahorros' && (t.date || '').startsWith(ym))
         .reduce((sum, t) => sum + (t.amount || 0), 0));
 }
-
-// ---------------------------------------------------------------- formularios (modal)
 
 function openIncomeSettingsForm() {
     const settings = getPlanSettings();
@@ -199,8 +197,7 @@ function openSavePlanForm() {
     });
 }
 
-// ---------------------------------------------------------------- vista
-
+/** Vista Planificación: ingresos fijos (proyección), gastos fijos, planes de pago y calendario de saldo del mes. */
 export function mount(container) {
     root = container;
     root.innerHTML = `
@@ -428,4 +425,3 @@ function renderCalendar(selected, ym) {
         </table>
     `;
 }
-

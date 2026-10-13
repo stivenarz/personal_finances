@@ -1,6 +1,3 @@
-/**
- * Opciones de selects compartidas por los formularios modales.
- */
 import { DataService } from '../../services/data-service.js';
 import { formatMoney } from '../../core/utils.js';
 import { accountAvailable, accountBalance, isCreditCard } from '../../domain/ledger.js';

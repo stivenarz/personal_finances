@@ -1,8 +1,3 @@
-/**
- * Panel de base de datos: elegir entre Solo local, Firebase o Google Sheets.
- * Sólo se muestra el formulario del proveedor elegido. La configuración se guarda
- * en localStorage del dispositivo y, al guardar, se recarga para conectar de nuevo.
- */
 import { DataService } from '../../services/data-service.js';
 import { PROVIDERS, SHEETS_URL_PATTERN, getConfig, saveConfig } from '../../services/config-service.js';
 import { showNotification } from '../../core/notifications.js';
@@ -19,6 +14,10 @@ const FIREBASE_FIELDS = [
 
 let section;
 
+/**
+ * Panel de base de datos: Solo local, Firebase o Google Sheets. Sólo se muestra el formulario del proveedor elegido;
+ * al guardar, la configuración se persiste en el dispositivo y la app se recarga para conectar.
+ */
 export function mountProviderPanel(container) {
     section = container;
     const config = getConfig();
@@ -177,4 +176,3 @@ export function renderSyncStatus(status) {
         extra.textContent = parts.join(' · ') || 'Los datos siempre se guardan en este dispositivo y se sincronizan con la nube si hay una configurada.';
     }
 }
-

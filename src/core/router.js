@@ -1,11 +1,10 @@
-/**
- * Router de vistas. Cada vista es un "feature" con { mount(root), render() }:
- *  - mount se ejecuta una vez y construye el esqueleto (HTML + eventos).
- *  - render se ejecuta al entrar a la vista y cada vez que cambian los datos.
- */
 const views = new Map();
 let active = null;
 
+/**
+ * Registra una vista. `feature` debe exponer `mount(contenedor)`, que construye el esqueleto una sola vez,
+ * y `render()`, que se ejecuta al entrar a la vista y en cada cambio de datos.
+ */
 export function registerView(id, { title, feature }) {
     views.set(id, { title, feature, mounted: false });
 }
@@ -28,17 +27,13 @@ export function showView(id) {
     document.getElementById(`view-${id}`).classList.add('active');
     document.getElementById('view-title').textContent = views.get(id).title;
 
-    const view = ensureMounted(id);
-    view.feature.render();
+    ensureMounted(id).feature.render();
 }
 
+/** Repinta sólo la vista visible. */
 export function renderActive() {
     if (!active) return;
     views.get(active)?.feature.render();
-}
-
-export function currentView() {
-    return active;
 }
 
 export function setupNavigation() {

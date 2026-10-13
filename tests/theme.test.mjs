@@ -49,7 +49,7 @@ test('preferencia fija ignora el sistema y se guarda en este dispositivo', () =>
     assert.equal(attrs.theme, 'light');
     assert.equal(localStorage.getItem('finanzas_theme'), 'light');
 
-    mediaListener(); // el sistema cambia, pero la preferencia es fija
+    mediaListener();
     assert.equal(attrs.theme, 'light');
 
     theme.setThemePreference('auto');

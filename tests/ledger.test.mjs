@@ -59,7 +59,6 @@ test('metas y deudas: avance y saldo calculados', async () => {
     assert.equal(ledger.debtBalance(DataService.find('debts', 'd1')), 700);
     assert.match(tx.createDebtPayment({ debtId: 'd1', account: 'a1', amount: 701 }).error, /exceder/);
 
-    // Borrar el movimiento del pago devuelve el saldo de la deuda
     const paymentTx = DataService.all('transactions').find(t => t.debtId === 'd1');
     tx.deleteTransaction(paymentTx);
     assert.equal(ledger.debtBalance(DataService.find('debts', 'd1')), 1000);
@@ -80,7 +79,6 @@ test('tarjeta: intereses por ciclo se calculan y se capitalizan', async () => {
     DataService.save('accounts', card());
     addTx({ type: 'Egreso', amount: 300000, account: 'tc', date: '2026-08-10' });
 
-    // Ago: 300000 × 2% = 6000 (se carga el 30/08). Sep: 306000 × 2% = 6120 (30/09). Oct aún no vence.
     const interest = ledger.allTransactions().filter(t => t.virtual);
     assert.deepEqual(interest.map(t => [t.date, t.amount]), [['2026-08-30', 6000], ['2026-09-30', 6120]]);
     assert.equal(ledger.accountBalance('tc'), -312120);
@@ -97,7 +95,6 @@ test('tarjeta: pagar el extracto antes de la fecha límite evita intereses', asy
     DataService.save('accounts', card());
     addAccount({ id: 'bank', initialBalance: 1000000 });
     addTx({ type: 'Egreso', amount: 300000, account: 'tc', date: '2026-08-10' });
-    // pago entre el corte (15/08) y la fecha límite (30/08)
     addTx({ type: 'Transferencia', amount: 300000, account: 'bank', toAccount: 'tc', date: '2026-08-20' });
 
     assert.equal(ledger.allTransactions().filter(t => t.virtual).length, 0);
@@ -114,11 +111,9 @@ test('tarjeta: un cambio de tasa sólo aplica hacia adelante', async () => {
     accountsDomain.updateAccount(account, {
         name: 'Visa', creditLimit: 1000000, usedCredit: 0, interestRate: 3, rateType: 'mensual', cutoffDay: 15, paymentDay: 30
     });
-    // Hoy 12/10: la nueva tasa rige desde hoy → los cortes de agosto/septiembre conservan 2%
     assert.equal(ledger.accountBalance('tc'), -312120);
     assert.equal(DataService.find('accounts', 'tc').rateHistory.length, 2);
 
-    // Un mes después, el corte de octubre ya usa 3%
     const { __setToday } = await import('../src/core/utils.js');
     __setToday('2026-11-05');
     ledger.resetLedgerCache();
@@ -157,7 +152,6 @@ test('eliminar cuentas: valida saldos', async () => {
 
 test('migración: datos con totales guardados quedan idénticos y es idempotente', async () => {
     await freshApp('2026-10-12');
-    // Formato anterior: totales guardados + vínculo por descripción
     DataService.save('accounts', { id: 'a1', name: 'Banco', type: 'Corriente', balance: 1500 });
     DataService.save('accounts', { id: 'tc', name: 'TC vieja', type: 'Tarjeta Crédito', balance: 200 });
     DataService.save('goals', { id: 'g1', description: 'Viaje', targetAmount: 1000, currentAmount: 250 });
@@ -166,7 +160,6 @@ test('migración: datos con totales guardados quedan idénticos y es idempotente
     DataService.save('transactions', { id: 't1', type: 'Egreso', amount: 100, account: 'a1', date: '2026-10-01' });
     DataService.save('transactions', { id: 't2', type: 'Ahorro', amount: 100, account: 'a1', date: '2026-10-02', description: 'Abono a meta: Viaje', category: 'Ahorros' });
 
-    // Antes de migrar se muestran los totales guardados
     assert.equal(ledger.accountBalance('a1'), 1500);
     assert.equal(ledger.goalAmount(DataService.find('goals', 'g1')), 250);
     assert.equal(ledger.debtBalance(DataService.find('debts', 'd1')), 1500);
@@ -185,7 +178,6 @@ test('migración: datos con totales guardados quedan idénticos y es idempotente
 
     assert.equal(runMigrations(), 0, 'segunda ejecución: sin cambios');
 
-    // Y a partir de aquí todo es calculado: un gasto nuevo baja el saldo
     addTx({ type: 'Egreso', amount: 50, account: 'a1' });
     assert.equal(ledger.accountBalance('a1'), 1450);
 });
@@ -201,13 +193,11 @@ test('deuda: intereses causados, pagos cubren primero intereses y cuota recalcul
     });
     const debt = () => DataService.find('debts', 'd1');
 
-    // 1 mes al 1% mensual: 10.000 de intereses; quedan 11 cuotas
     assert.equal(ledger.debtInterestAccrued(debt()), 10000);
     assert.equal(ledger.debtBalance(debt()), 1010000);
     assert.equal(ledger.debtRemainingTerm(debt()), 11);
     assert.equal(ledger.debtMonthlyPayment(debt()), pmt(1010000, 0.01, 11));
 
-    // Un pago de 100.000: 10.000 a intereses y 90.000 a capital
     assert.ok(tx.createDebtPayment({ debtId: 'd1', account: 'bank', amount: 100000, date: '2026-10-12' }).ok);
     assert.equal(ledger.debtInterestPaid(debt()), 10000);
     assert.equal(ledger.debtBalance(debt()), 910000);
@@ -215,7 +205,6 @@ test('deuda: intereses causados, pagos cubren primero intereses y cuota recalcul
     assert.equal(lower, pmt(910000, 0.01, 11), 'la cuota baja sola con el abono');
     assert.ok(lower < pmt(1010000, 0.01, 11));
 
-    // Un mes después se causan 9.100 sobre el capital restante
     const { __setToday } = await import('../src/core/utils.js');
     __setToday('2026-11-12');
     ledger.resetLedgerCache();
@@ -223,7 +212,6 @@ test('deuda: intereses causados, pagos cubren primero intereses y cuota recalcul
     assert.equal(ledger.debtBalance(debt()), 919100);
     assert.equal(ledger.debtRemainingTerm(debt()), 10);
 
-    // No se puede pagar más que el saldo con intereses
     assert.match(tx.createDebtPayment({ debtId: 'd1', account: 'bank', amount: 919101, date: '2026-11-12' }).error, /exceder/);
     assert.ok(tx.createDebtPayment({ debtId: 'd1', account: 'bank', amount: 919100, date: '2026-11-12' }).ok);
     assert.equal(ledger.debtBalance(debt()), 0);
@@ -239,7 +227,6 @@ test('deuda: sin tasa la cuota es saldo / meses restantes; sin plazo usa la cuot
     assert.equal(ledger.debtMonthlyPayment(DataService.find('debts', 'b')), 250);
     assert.equal(ledger.debtMonthsLeft(DataService.find('debts', 'b')), 4);
 
-    // Cuota manual que no cubre los intereses: no hay estimación de meses
     DataService.save('debts', { id: 'c', entity: 'Insuficiente', baseBalance: 100000, interestRate: 24, termMonths: 0, monthlyPayment: 1000, interestFrom: '2026-10-12' });
     assert.equal(ledger.debtMonthsLeft(DataService.find('debts', 'c')), null);
 });

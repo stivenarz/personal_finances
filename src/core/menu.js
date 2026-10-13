@@ -1,16 +1,15 @@
-/**
- * Menú lateral móvil: botón hamburguesa, overlay y gestos de deslizamiento.
- *
- * El botón hamburguesa permanece SIEMPRE en el DOM y visible; al abrirse el menú
- * simplemente queda detrás del panel (el sidebar tiene mayor z-index).
- */
-export function setMenuOpen(open) {
+function setMenuOpen(open) {
     const toggle = document.getElementById('mobile-menu-toggle');
     document.getElementById('sidebar').classList.toggle('open', open);
     document.getElementById('sidebar-overlay')?.classList.toggle('open', open);
     toggle?.setAttribute('aria-expanded', String(open));
 }
 
+/**
+ * Menú lateral móvil: botón hamburguesa, botón cerrar, fondo oscuro y gestos de deslizamiento
+ * (desde el borde izquierdo abre; hacia la izquierda cierra). El botón hamburguesa nunca sale del DOM:
+ * al abrirse el menú queda detrás del panel.
+ */
 export function setupMobileMenu() {
     const toggle = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');

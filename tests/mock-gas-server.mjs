@@ -1,8 +1,3 @@
-/**
- * Servidor HTTP local que expone el Code.gs real (con hoja en memoria), con CORS,
- * para probar la app en el navegador sin Google.  Uso:  node tests/mock-gas-server.mjs
- * URL a pegar en la app: http://localhost:8787/macros/s/TEST/exec
- */
 import http from 'node:http';
 import { createGas } from './gas-harness.mjs';
 

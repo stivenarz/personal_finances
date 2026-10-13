@@ -1,14 +1,11 @@
-/* ==========================================================================
-   Componentes añadidos en la v2: formularios modales, cuentas/tarjetas,
-   panel de base de datos y utilidades compartidas por las vistas.
-   ========================================================================== */
-
+/* Los componentes con display: flex ganarían al atributo hidden */
 [hidden] { display: none !important; }
 
-/* ---- PWA instalada (status-bar-style "black-translucent") ----
-   La página se dibuja bajo la barra de estado y llega hasta el borde inferior. Para ello no se usan capas
-   fijas (iOS las recorta al viewport): html/body no recortan, el contenedor mide 100vh (alto de pantalla)
-   dentro del propio documento y el menú y su fondo oscuro son "absolute" dentro de ese contenedor. */
+/*
+ * PWA con barra de estado translúcida: iOS recorta las capas fijas y lo que html/body ocultan al viewport (812 pt
+ * en una pantalla de 874), lo que dejaba una franja abajo. Por eso el contenedor mide 100vh dentro del propio
+ * documento y el menú y su fondo oscuro son absolutos dentro de él.
+ */
 @media (display-mode: standalone) {
     html, body { height: auto; min-height: 100vh; overflow: visible; overscroll-behavior: none; }
     .container { position: relative; height: 100vh; padding-bottom: 0; }
@@ -21,54 +18,6 @@
     .sidebar-footer { padding-bottom: calc(env(safe-area-inset-bottom) - 20px); }
 }
 
-/* Fundido entre la barra de estado (color sólido de .status-tint) y el dibujo: así el dibujo parece
-   continuar hasta el borde superior de la pantalla en la PWA. */
-@media (display-mode: standalone) and (max-width: 768px) {
-    .top-header,
-    .sidebar-header { position: relative; isolation: isolate; }
-
-    .top-header::before,
-    .sidebar-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 72px;
-        background: linear-gradient(to bottom, #6a62cf 0%, rgba(106, 98, 207, 0.8) 30%, rgba(106, 98, 207, 0) 100%);
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    .top-header > *,
-    .sidebar-header > * { position: relative; z-index: 1; }
-}
-
-/* Teñido de la barra de estado: iOS colorea esa zona con el color de los elementos fijos pegados al borde
-   superior. Esta banda fija (del color del dibujo) hace que la barra de estado se vea morada y continúe
-   el encabezado y el menú, aunque la página empiece justo debajo de la barra. */
-.status-tint { display: none; }
-
-/* Modo a sangre (barra translúcida): el dibujo ya cubre la zona segura; no hace falta teñir ni fundir */
-html.fullbleed .status-tint { display: none !important; }
-html.fullbleed .top-header::before,
-html.fullbleed .sidebar-header::before { display: none !important; }
-
-@media (display-mode: standalone) and (max-width: 768px) {
-    .status-tint {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 8px;
-        background: #6a62cf;
-        z-index: 1001; /* por encima del menú (999) y del fondo oscuro (998) */
-        pointer-events: none;
-    }
-}
-
-/* ---- Barra de sección con botón "Agregar" ---- */
 .section-toolbar {
     display: flex;
     align-items: center;
@@ -78,6 +27,7 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .section-toolbar h3 { margin: 0; }
+
 .section-toolbar .btn { white-space: nowrap; }
 
 .empty-state {
@@ -97,7 +47,6 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 
 .btn-block { width: 100%; }
 
-/* ---- Modales ---- */
 .modal-hint {
     color: var(--text-secondary);
     font-size: 12px;
@@ -115,7 +64,6 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 
 .modal-card .modal-note strong { color: var(--text-primary); }
 
-/* ---- Cuentas y tarjetas de crédito ---- */
 .accounts-kpis,
 .savings-kpis { margin-bottom: 24px; }
 
@@ -176,17 +124,21 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .cc-details dt { color: var(--text-secondary); font-size: 12px; }
+
 .cc-details dd { font-weight: 600; }
+
 .cc-details .urgent dd { color: var(--danger); }
 
-/* ---- Transacciones ---- */
 .transaction-row.transferencia { border-left-color: var(--text-secondary); }
+
 .tx-title { font-weight: 500; }
+
 .tx-meta { font-size: 12px; color: var(--text-secondary); }
+
 .tx-amount { font-weight: 600; }
+
 .debt-amount { font-weight: 600; color: var(--warning); }
 
-/* ---- Metas de ahorro ---- */
 .goal-card {
     border-left: 4px solid var(--primary);
     padding: 20px;
@@ -196,19 +148,25 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .goal-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; flex-wrap: wrap; }
+
 .goal-card-info { flex: 1 1 200px; }
+
 .goal-card-info h4 { margin: 0 0 10px; font-size: 16px; }
+
 .goal-card-info p { margin: 6px 0; color: var(--text-secondary); font-size: 14px; }
+
 .goal-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
 .goal-card .goal-progress { width: 100%; height: 8px; margin-top: 14px; background: var(--dark-light); border-radius: 4px; overflow: hidden; }
+
 .goal-card .goal-progress > div { height: 100%; }
+
 .goal-card-percent { margin: 10px 0 0; text-align: right; color: var(--text-secondary); font-size: 12px; }
 
-/* ---- Planificación ---- */
 .plan-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+
 .plan-card-head h3 { margin: 0; }
 
-/* ---- Panel de base de datos ---- */
 .sync-box {
     display: flex;
     align-items: center;
@@ -221,11 +179,15 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .sync-box-info { flex: 1; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
 .sync-box-info small { color: var(--text-secondary); font-size: 12px; }
 
 .provider-panel { margin-top: 16px; }
+
 .provider-help { display: block; color: var(--text-secondary); font-size: 13px; margin: 8px 0 12px; }
+
 .provider-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
 .provider-actions .btn { text-decoration: none; text-align: center; }
 
 .provider-status {
@@ -235,6 +197,7 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .provider-status.success { background: var(--secondary-light); color: var(--secondary); }
+
 .provider-status.error { background: var(--danger-light); color: var(--danger); }
 
 .config-danger {
@@ -243,7 +206,9 @@ html.fullbleed .sidebar-header::before { display: none !important; }
 }
 
 .config-danger h3 { color: var(--danger); }
+
 .danger-text { color: var(--text-secondary); font-size: 14px; margin-bottom: 12px; }
+
 ul.danger-text { margin-left: 20px; }
 
 @media (max-width: 768px) {
@@ -251,7 +216,6 @@ ul.danger-text { margin-left: 20px; }
     .section-toolbar { flex-wrap: wrap; }
 }
 
-/* ---- Icono de la app (el mismo PNG del icono instalado) ---- */
 .sidebar-header h1 {
     display: flex;
     align-items: center;
@@ -279,18 +243,12 @@ ul.danger-text { margin-left: 20px; }
     .brand-icon { width: 30px; height: 30px; border-radius: 8px; }
 }
 
-/* Menú móvil (ancho ~260px): título más compacto para que no choque con el botón de cerrar */
 @media (max-width: 768px) {
     .sidebar-header { padding-left: 16px; padding-right: 14px; gap: 8px; }
     .sidebar-header h1 { font-size: 23px; gap: 8px; justify-content: flex-start; }
     .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
 }
 
-/* ==========================================================================
-   Encabezado y menú con ilustración a sangre (hasta el borde superior)
-   El dibujo llega bajo la barra de estado; el contenido respeta la zona segura
-   con env(safe-area-inset-top) (vale 0 con status-bar-style "default"; ver .status-tint más arriba).
-   ========================================================================== */
 .top-header {
     background: #5b5fcf url('../assets/header-art.svg') center / cover no-repeat;
     border-bottom: none;
@@ -333,7 +291,6 @@ ul.danger-text { margin-left: 20px; }
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Menú: el degradado y la ilustración llegan hasta arriba; el título baja la zona segura */
 .sidebar-header {
     background: url('../assets/header-art.svg') center / cover no-repeat;
     padding-top: calc(env(safe-area-inset-top) + 22px);
@@ -345,9 +302,6 @@ ul.danger-text { margin-left: 20px; }
     .top-header { padding-bottom: 14px; }
 }
 
-/* ==========================================================================
-   Modo oscuro: se redefinen las variables de color (el tema lo pone theme-service en <html data-theme>)
-   ========================================================================== */
 :root { --loading-bg: rgba(255, 255, 255, 0.95); }
 
 :root[data-theme="dark"] {
@@ -360,7 +314,6 @@ ul.danger-text { margin-left: 20px; }
     --danger-light: rgba(248, 113, 113, 0.16);
     --warning: #fbbf24;
     --warning-light: rgba(251, 191, 36, 0.16);
-    --dark: #e5e7eb;
     --dark-light: #1f2735;
     --border: #2b3445;
     --text-primary: #e6e9ef;
@@ -370,7 +323,6 @@ ul.danger-text { margin-left: 20px; }
     --loading-bg: rgba(12, 16, 23, 0.96);
 }
 
-/* Campos de formulario sin estilo propio (especificidad 0: no pisa los estilos de cada componente) */
 :where(:root[data-theme="dark"]) :where(input, select, textarea) {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
@@ -378,14 +330,15 @@ ul.danger-text { margin-left: 20px; }
 }
 
 :root[data-theme="dark"] .badge-auto { color: #fbbf24; }
+
 :root[data-theme="dark"] .modal-card,
 :root[data-theme="dark"] .kpi-card,
 :root[data-theme="dark"] .chart-card { box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45); }
+
 :root[data-theme="dark"] .account-item.credit-card {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.16), rgba(118, 75, 162, 0.16));
 }
 
-/* ---- Selector de apariencia (Configuración) ---- */
 .theme-options {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -409,9 +362,13 @@ ul.danger-text { margin-left: 20px; }
 }
 
 .theme-option:active { transform: scale(0.97); }
+
 .theme-option input { position: absolute; opacity: 0; pointer-events: none; }
+
 .theme-option-icon { font-size: 26px; line-height: 1; }
+
 .theme-option-label { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+
 .theme-option small { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
 
 .theme-option:has(input:checked) {

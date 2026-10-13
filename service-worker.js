@@ -1,18 +1,6 @@
-/**
- * SERVICE WORKER - Soporte Offline
- * ================================
- * - Precachea el "shell" de la app (HTML, CSS, módulos JS) para abrir sin conexión.
- * - Estrategia network-first para los archivos de la app: si hay red se usa la versión
- *   más nueva (y se actualiza la caché); sin red se sirve la caché.
- * - Librerías de CDN (Chart.js, SDK de Firebase): se cachean al usarse la primera vez.
- * - NO intercepta las llamadas de sincronización (Apps Script, Firestore): esas
- *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
- */
+const CACHE_VERSION = 'finanzas-v28';
+const RUNTIME_CACHE = 'finanzas-runtime-v28';
 
-const CACHE_VERSION = 'finanzas-v27';
-const RUNTIME_CACHE = 'finanzas-runtime-v27';
-
-// Rutas relativas al service worker: la app puede vivir en la raíz o en una subruta (GitHub Pages)
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -64,13 +52,11 @@ const CORE_ASSETS = [
   './src/features/settings/danger-zone.js'
 ];
 
-// Hosts externos cuyos archivos estáticos sí se cachean
 const CACHEABLE_CDNS = ['cdn.jsdelivr.net', 'www.gstatic.com'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      // Una a una: si un archivo falla no se pierde todo el precacheo
       .then(cache => Promise.all(CORE_ASSETS.map(asset => cache.add(asset).catch(error => console.warn('[SW] No se pudo precachear', asset, error)))))
       .then(() => self.skipWaiting())
   );
@@ -88,6 +74,7 @@ self.addEventListener('activate', event => {
   );
 });
 
+/** Sólo se interceptan archivos propios y las CDN conocidas: las llamadas de sincronización van siempre directo a la red. */
 self.addEventListener('fetch', event => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -96,14 +83,14 @@ self.addEventListener('fetch', event => {
   if (!url.protocol.startsWith('http')) return;
 
   const sameOrigin = url.origin === self.location.origin;
-  if (!sameOrigin && !CACHEABLE_CDNS.includes(url.hostname)) return; // sincronización: directo a la red
+  if (!sameOrigin && !CACHEABLE_CDNS.includes(url.hostname)) return;
 
   event.respondWith(networkFirst(request));
 });
 
+/** Red primero (siempre revalidando) y caché como respaldo sin conexión; las navegaciones caen en offline.html. */
 async function networkFirst(request) {
   try {
-    // 'no-cache': siempre revalida contra el servidor (evita servir una versión vieja de la caché HTTP)
     const response = await fetch(request, { cache: 'no-cache' });
     if (response && response.status === 200) {
       const copy = response.clone();
@@ -117,9 +104,3 @@ async function networkFirst(request) {
     throw error;
   }
 }
-
-self.addEventListener('message', event => {
-  if (event.data && event.data.action === 'clearCache') {
-    caches.delete(RUNTIME_CACHE);
-  }
-});

@@ -1,13 +1,13 @@
-/**
- * Toasts de notificación (se cierran al tocar o a los 5 s).
- */
-
 function dismiss(notification) {
     if (notification.classList.contains('leaving')) return;
     notification.classList.add('leaving');
     setTimeout(() => notification.remove(), 300);
 }
 
+/**
+ * Muestra un toast que se cierra al tocarlo o a los 5 s.
+ * @param {'info'|'success'|'warning'|'error'} type
+ */
 export function showNotification(message, type = 'info') {
     let root = document.getElementById('toast-root');
     if (!root) {

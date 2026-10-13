@@ -1,8 +1,3 @@
-/**
- * Sincronización multi-dispositivo con el proveedor de Google Sheets contra el
- * Code.gs real (ejecutado en Node). Cada "dispositivo" tiene su propio
- * almacenamiento local, su instancia de DataService y de proveedor.
- */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { installBrowserShims } from './helpers.mjs';
@@ -63,7 +58,6 @@ test('Code.gs: ping, batch, pull incremental y último updatedAt gana', () => {
     assert.equal(all.rows.length, 2);
     assert.deepEqual(gas.get({ action: 'pull', since: 2 }).rows, [], 'sin cambios nuevos');
 
-    // Escritura más vieja: se ignora. Más nueva: se aplica.
     gas.post({ action: 'batch', ops: [{ op: 'save', c: 'accounts', id: 'a1', updatedAt: 50, data: { id: 'a1', name: 'VIEJO' } }] });
     assert.equal(gas.get({ action: 'pull', since: 0 }).rows.find(x => x.id === 'a1').data.name, 'Uno');
     gas.post({ action: 'batch', ops: [{ op: 'save', c: 'accounts', id: 'a1', updatedAt: 200, data: { id: 'a1', name: 'NUEVO' } }] });
@@ -71,7 +65,6 @@ test('Code.gs: ping, batch, pull incremental y último updatedAt gana', () => {
     assert.equal(incremental.rows.length, 1);
     assert.equal(incremental.rows[0].data.name, 'NUEVO');
 
-    // patch fusiona campos; remove deja tombstone; patch sobre borrado se ignora
     gas.post({ action: 'batch', ops: [{ op: 'patch', c: 'accounts', id: 'a1', updatedAt: 300, fields: { color: 'rojo' } }] });
     const merged = gas.get({ action: 'pull', since: 0 }).rows.find(x => x.id === 'a1');
     assert.deepEqual([merged.data.name, merged.data.color], ['NUEVO', 'rojo']);
@@ -143,7 +136,6 @@ test('sin conexión: los cambios se guardan, sobreviven a un reinicio y se enví
     assert.ok(JSON.parse(store.getItem('sheets_outbox')).length >= 1, 'cola persistida');
     await A.DS.disconnect();
 
-    // "Reinicio" de la app con la red aún caída: los datos siguen ahí
     const A2 = await device({ store });
     assert.equal(A2.DS.all('transactions').length, 1);
 
@@ -163,7 +155,7 @@ test('al conectar por primera vez se sube lo que sólo existía en local', async
     localOnly.DS.save('accounts', { id: 'old1', name: 'Cuenta vieja', type: 'Corriente', initialBalance: 5 });
     localOnly.DS.save('goals', { id: 'g9', description: 'Meta', targetAmount: 10, baseAmount: 0 });
 
-    const cloud = await device({ store });   // mismo almacenamiento, ahora con nube
+    const cloud = await device({ store });
     await cloud.DS.whenReady();
     await cloud.DS.sync();
 
@@ -182,7 +174,6 @@ test('un dispositivo con datos viejos no pisa los cambios más recientes', async
     A.DS.patch('accounts', 'z', { name: 'v2' });
     await A.DS.sync();
 
-    // llega tarde una escritura antigua desde otro dispositivo
     gas.post({ action: 'batch', ops: [{ op: 'save', c: 'accounts', id: 'z', updatedAt: stale.updatedAt, data: stale }] });
     await A.DS.sync();
     assert.equal(A.DS.find('accounts', 'z').name, 'v2');

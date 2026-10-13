@@ -1,23 +1,8 @@
 /**
- * FINANZAS PERSONALES — Backend en Google Apps Script
- * ===================================================
- * Convierte una hoja de cálculo de Google en la base de datos de la app.
- * Guía paso a paso: docs/google-sheets-guide.html
- *
- * Cada colección de la app es una pestaña con las columnas:
- *   id | updatedAt | deleted | seq | data (JSON del registro)
- *
- *  - updatedAt: marca de tiempo (ms) del cliente. Gana la escritura más reciente.
- *  - deleted:   1 si el registro fue eliminado (se conserva para propagar el borrado).
- *  - seq:       contador del servidor; permite que todos los dispositivos reciban
- *               los cambios de forma incremental aunque sus relojes difieran.
- *
- * Endpoints (los usa src/services/providers/sheets.js):
- *   GET  ?action=ping
- *   GET  ?action=pull&since=<seq>
- *   POST {action:'batch', ops:[{op:'save'|'patch'|'remove', c, id, data|fields, updatedAt}]}
+ * Backend de Finanzas Personales: usa la hoja de cálculo como base de datos. Cada colección es una pestaña
+ * con las columnas id | updatedAt | deleted | seq | data (JSON del registro).
+ * `seq` es un contador del servidor que permite a cada dispositivo pedir sólo lo nuevo.
  */
-
 var APP_ID = 'finanzas-sheets';
 var COLLECTIONS = [
   'accounts', 'categories', 'transactions', 'debts', 'debtPayments',
@@ -25,8 +10,7 @@ var COLLECTIONS = [
 ];
 var HEADERS = ['id', 'updatedAt', 'deleted', 'seq', 'data'];
 
-// ---------------------------------------------------------------- entradas HTTP
-
+/** GET ?action=ping devuelve la versión; GET ?action=pull&since=<seq> devuelve los registros con seq mayor. */
 function doGet(e) {
   try {
     var params = (e && e.parameter) || {};
@@ -38,6 +22,7 @@ function doGet(e) {
   }
 }
 
+/** POST {action:'batch', ops:[...]} aplica las operaciones (save, patch, remove) bajo un bloqueo del script. */
 function doPost(e) {
   var lock = LockService.getScriptLock();
   try {
@@ -58,8 +43,7 @@ function setup() {
   Logger.log('Listo: pestañas creadas. Ahora despliega como Aplicación web.');
 }
 
-// ---------------------------------------------------------------- lectura
-
+/** Registros (incluidos los borrados) con seq mayor que `since`. Si no hay cambios responde sin leer las hojas. */
 function pull_(since) {
   var version = getVersion_();
   if (since >= version) return { ok: true, version: version, rows: [] };
@@ -88,8 +72,10 @@ function pull_(since) {
   return { ok: true, version: version, rows: rows };
 }
 
-// ---------------------------------------------------------------- escritura
-
+/**
+ * Aplica operaciones idempotentes: `save` y `remove` sólo se aplican si no hay una escritura más reciente
+ * (último updatedAt gana); `patch` fusiona campos. Cada escritura incrementa `seq`.
+ */
 function applyBatch_(ops) {
   var version = getVersion_();
   var tables = {};
@@ -151,8 +137,6 @@ function write_(t, id, updatedAt, deleted, seq, dataJson) {
   t.sheet.getRange(row, 1, 1, HEADERS.length).setValues([[id, updatedAt, deleted ? 1 : 0, seq, dataJson]]);
   t.index[id] = { row: row, updatedAt: updatedAt, deleted: deleted };
 }
-
-// ---------------------------------------------------------------- utilidades
 
 function getSheet_(name) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();

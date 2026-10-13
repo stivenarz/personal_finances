@@ -1,8 +1,3 @@
-/**
- * Ejecuta el Code.gs REAL de Google Apps Script en Node con mocks de
- * SpreadsheetApp / PropertiesService / LockService / ContentService.
- * Sirve para probar el protocolo de sincronización sin una cuenta de Google.
- */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';

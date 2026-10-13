@@ -1,4 +1,3 @@
-// Utilidades de prueba: localStorage en memoria y navegador mínimo para Node.
 export function installBrowserShims() {
     const store = new Map();
     globalThis.localStorage = {

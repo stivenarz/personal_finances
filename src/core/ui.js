@@ -1,9 +1,6 @@
-/**
- * Piezas de UI reutilizables entre vistas.
- */
 import { escapeHtml } from './utils.js';
 
-/** Encabezado de sección con botón "Agregar" (los alta se hacen siempre en modal). */
+/** Encabezado de sección con el botón "Agregar" que abre el formulario modal de alta. */
 export function sectionToolbar(title, { addLabel = 'Agregar', action = 'add' } = {}) {
     return `
         <div class="section-toolbar">
@@ -18,8 +15,8 @@ export function emptyState(message) {
 }
 
 /**
- * Delegación de eventos para botones con data-action / data-id dentro de `root`.
- * handlers: { edit: (id) => ..., delete: (id) => ... }
+ * Delegación de eventos: llama a `handlers[data-action](data-id, elemento)` al pulsar un
+ * botón `[data-action]` dentro de `root`.
  */
 export function onActions(root, handlers) {
     root.addEventListener('click', (event) => {

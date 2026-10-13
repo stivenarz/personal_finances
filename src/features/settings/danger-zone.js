@@ -1,10 +1,8 @@
-/**
- * Zona de peligro: borrado total de datos con doble confirmación.
- */
 import { DataService } from '../../services/data-service.js';
 import { openFormModal, confirmDialog } from '../../core/modal.js';
 import { showNotification } from '../../core/notifications.js';
 
+/** Borrado total de datos (también en la nube) con doble confirmación. */
 export function mountDangerZone(section) {
     section.innerHTML = `
         <h3>⚠️ Zona de Peligro</h3>

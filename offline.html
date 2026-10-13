@@ -182,22 +182,15 @@
     </div>
 
     <script>
-        /**
-         * Detectar cuando vuelva la conexión
-         */
         window.addEventListener('online', () => {
             console.log('[App] Conexión restaurada');
-            // Esperar un poco para asegurar que la conexión es estable
             setTimeout(() => {
                 location.reload();
             }, 1000);
         });
 
-        /**
-         * Confirmar estado offline
-         */
         console.log('[App] Offline page loaded');
         console.log('[App] Online status:', navigator.onLine);
-    </script>
+</script>
 </body>
 </html>

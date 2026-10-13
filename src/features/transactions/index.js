@@ -1,6 +1,3 @@
-/**
- * Vista TRANSACCIONES: todos los movimientos del mes (incluye intereses de tarjeta calculados).
- */
 import { DataService } from '../../services/data-service.js';
 import { allTransactions } from '../../domain/ledger.js';
 import { uiState } from '../../core/state.js';
@@ -11,6 +8,7 @@ import { categoryLabel } from '../shared/options.js';
 
 let root;
 
+/** Vista Transacciones: todos los movimientos del mes, incluidos los intereses calculados de las tarjetas. */
 export function mount(container) {
     root = container;
     root.innerHTML = `

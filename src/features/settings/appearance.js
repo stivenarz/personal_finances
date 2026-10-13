@@ -1,12 +1,9 @@
-/**
- * Panel de apariencia: Automático (según el sistema) / Claro / Oscuro.
- * La preferencia se guarda en este dispositivo (ver services/theme-service.js).
- */
 import {
     THEME_OPTIONS, getThemePreference, getResolvedTheme, setThemePreference, onThemeChange
 } from '../../services/theme-service.js';
 import { escapeHtml } from '../../core/utils.js';
 
+/** Panel de apariencia: Automático (según el sistema), Claro u Oscuro. */
 export function mountAppearance(section) {
     section.innerHTML = `
         <h3>🎨 Apariencia</h3>

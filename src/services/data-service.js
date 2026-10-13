@@ -1,37 +1,23 @@
-/**
- * DATA SERVICE — única puerta de entrada a los datos para toda la app.
- *
- * Los componentes sólo usan esta API (save / patch / remove / all / find /
- * subscribe / sync ...) sin saber si por debajo hay Firebase, Google Sheets o
- * nada. Responsabilidades:
- *
- *  1. Mantener el estado en memoria y persistirlo siempre en localStorage
- *     (la app funciona 100% sin nube y offline).
- *  2. Delegar la sincronización en un "proveedor" intercambiable
- *     (providers/firebase.js, providers/sheets.js, providers/local.js), todos con
- *     el mismo contrato:
- *
- *       connect({ onRemote, onReady, onStatus }) -> Promise
- *       save(collection, record)                 -> Promise
- *       patch(collection, id, fields, updatedAt) -> Promise
- *       remove(collection, id, updatedAt)        -> Promise
- *       sync()    -> Promise   (forzar sincronización)
- *       flush()   -> Promise   (esperar escrituras pendientes)
- *       disconnect()
- *       test(config) -> { success, message }
- *
- *  3. Resolver conflictos multi-dispositivo: gana la escritura con `updatedAt`
- *     más reciente (por registro). Los borrados se propagan como "tombstones".
- *  4. Reconciliar tras el primer sync del servidor: sube lo que sólo existe en
- *     local o es más nuevo (cambios hechos sin conexión).
- *
- * IMPORTANTE: aquí sólo se guardan registros "base". Ningún total (saldos,
- * avance de metas, saldo de deudas...) se almacena: se calcula en domain/ledger.js.
- */
 import { getConfig, getActiveProvider } from './config-service.js';
 import { COLLECTIONS } from './collections.js';
 
-export { COLLECTIONS };
+/**
+ * Contrato que cumplen los proveedores de sincronización (providers/local.js, firebase.js y sheets.js).
+ * Todos los registros llevan `updatedAt` (ms): gana la escritura más reciente por registro.
+ *
+ * @typedef {Object} Provider
+ * @property {string} name
+ * @property {(handlers: {config: Object, storage: Storage, onRemote: Function, onReady: Function, onStatus: Function}) => Promise<void>} connect
+ *   `onRemote(colección, cambios[{id, updatedAt, deleted, data}])` entrega lo que llega de la nube;
+ *   `onReady()` se llama al terminar el primer sync confirmado por el servidor.
+ * @property {(collection: string, record: Object) => Promise<void>} save
+ * @property {(collection: string, id: string, fields: Object, updatedAt: number) => Promise<void>} patch
+ * @property {(collection: string, id: string, updatedAt: number) => Promise<void>} remove
+ * @property {() => Promise<void>} sync
+ * @property {() => Promise<void>} flush
+ * @property {() => Promise<void>} disconnect
+ * @property {(config: Object) => Promise<{success: boolean, message: string}>} test
+ */
 
 const DATA_KEY = 'app_offline_data';
 const TOMBSTONES_KEY = 'app_tombstones';
@@ -40,8 +26,8 @@ const emptyData = () => Object.fromEntries(COLLECTIONS.map(name => [name, []]));
 const emptyMap = () => Object.fromEntries(COLLECTIONS.map(name => [name, {}]));
 
 let data = emptyData();
-let tombstones = emptyMap();   // { collection: { id: updatedAt } } borrados locales
-let remoteIndex = emptyMap();  // { collection: { id: { updatedAt, deleted } } } lo que sabemos de la nube
+let tombstones = emptyMap();
+let remoteIndex = emptyMap();
 let version = 0;
 let lastLocalStamp = 0;
 
@@ -57,10 +43,8 @@ const readyWaiters = [];
 let emitTimer = null;
 let retryTimer = null;
 
-// ---------------------------------------------------------------- persistencia
-
 let configOverride = null;
-let storageImpl = null; // inyectable (pruebas / varios dispositivos simulados)
+let storageImpl = null;
 
 function storage() {
     if (storageImpl) return storageImpl;
@@ -92,8 +76,6 @@ function persist() {
         console.error('Error guardando datos locales:', error);
     }
 }
-
-// ---------------------------------------------------------------- eventos
 
 function emitChange() {
     version++;
@@ -127,8 +109,7 @@ function cloud(promise) {
     promise.catch(reportCloudError);
 }
 
-// ---------------------------------------------------------------- datos remotos
-
+/** Aplica cambios llegados de la nube resolviendo conflictos por `updatedAt` y respetando los borrados locales. */
 function applyRemote(collection, changes) {
     const list = data[collection];
     let touched = false;
@@ -152,8 +133,8 @@ function applyRemote(collection, changes) {
             return;
         }
 
-        if (tombstone !== undefined && tombstone >= (change.updatedAt || 0)) return; // borrado local más reciente
-        if (local && localTime > (change.updatedAt || 0)) return;                    // local más reciente
+        if (tombstone !== undefined && tombstone >= (change.updatedAt || 0)) return;
+        if (local && localTime > (change.updatedAt || 0)) return;
 
         const record = { ...change.data, id: change.id, updatedAt: change.updatedAt || 0 };
         if (local && JSON.stringify(local) === JSON.stringify(record)) return;
@@ -198,8 +179,6 @@ function handleReady() {
     emitChange();
 }
 
-// ---------------------------------------------------------------- proveedor
-
 async function loadProvider(name) {
     if (name === 'firebase') return (await import('./providers/firebase.js')).default;
     if (name === 'sheets') return (await import('./providers/sheets.js')).default;
@@ -224,14 +203,15 @@ async function connectProvider() {
     }
 }
 
-// ---------------------------------------------------------------- API pública
-
+/**
+ * Única puerta de entrada a los datos. Mantiene el estado en memoria y en localStorage (la app funciona
+ * sin nube y sin conexión) y lo sincroniza a través del proveedor activo. Sólo guarda registros base:
+ * los totales se calculan en domain/ledger.js.
+ */
 export const DataService = {
-    COLLECTIONS,
-
     /**
-     * Carga datos locales y conecta con el proveedor activo.
-     * Devuelve cuando el estado local está disponible (no espera a la nube).
+     * Carga los datos locales y conecta en segundo plano con el proveedor configurado. No espera a la nube.
+     * `providerOverride`, `storage` y `config` permiten inyectar dependencias (pruebas, varios dispositivos simulados).
      */
     async init({ providerOverride = null, storage: customStorage = null, config = null } = {}) {
         storageImpl = customStorage;
@@ -257,19 +237,20 @@ export const DataService = {
         connectProvider();
     },
 
+    /** Contador que sube con cada cambio de datos; permite cachear cálculos. */
     get version() { return version; },
-    get providerName() { return providerName; },
-    get isReady() { return ready; },
 
-    /** Resuelve cuando el primer sync con la nube terminó (o ya, en modo local). */
+    /** Resuelve cuando el primer sync con la nube terminó (de inmediato en modo local). */
     whenReady() {
         return ready ? Promise.resolve() : new Promise(resolve => readyWaiters.push(resolve));
     },
 
+    /** Registros de una colección. Es la lista viva: no se debe modificar directamente. */
     all(collection) { return data[collection]; },
-    find(collection, id) { return data[collection].find(item => item.id === id) || null; },
-    snapshot() { return data; },
 
+    find(collection, id) { return data[collection].find(item => item.id === id) || null; },
+
+    /** Crea o reemplaza un registro completo. Devuelve el registro guardado (con `updatedAt`). */
     save(collection, record) {
         const next = { ...record, updatedAt: stamp() };
         const list = data[collection];
@@ -283,6 +264,7 @@ export const DataService = {
         return next;
     },
 
+    /** Actualiza sólo `fields` de un registro (en la nube se fusionan con los de otros dispositivos). */
     patch(collection, id, fields) {
         const record = data[collection].find(item => item.id === id);
         if (!record) return null;
@@ -294,6 +276,7 @@ export const DataService = {
         return record;
     },
 
+    /** Elimina un registro y deja un borrado (tombstone) para que los demás dispositivos no lo recreen. */
     remove(collection, id) {
         const before = data[collection].length;
         data[collection] = data[collection].filter(item => item.id !== id);
@@ -306,20 +289,23 @@ export const DataService = {
         return true;
     },
 
-    /** Suscripción a cambios de datos (locales o remotos). Devuelve la función para desuscribir. */
+    /** Suscripción a cambios de datos, locales o remotos. Devuelve la función para cancelar. */
     subscribe(listener) {
         changeListeners.add(listener);
         return () => changeListeners.delete(listener);
     },
 
+    /** Suscripción al estado de sincronización; se llama de inmediato con el estado actual. */
     onStatus(listener) {
         statusListeners.add(listener);
         listener(status);
         return () => statusListeners.delete(listener);
     },
 
+    /** @returns {{provider: string, state: string, pending: number, error: string|null, lastSync: number|null}} */
     getStatus() { return status; },
 
+    /** Fuerza la sincronización con la nube. */
     async sync() {
         if (!provider || providerName === 'local') return { success: false, message: 'Sin proveedor de nube configurado' };
         try {
@@ -332,10 +318,12 @@ export const DataService = {
         }
     },
 
+    /** Espera a que se envíen los cambios pendientes. */
     async flush() {
         if (provider && connected) await provider.flush();
     },
 
+    /** Prueba las credenciales de un proveedor sin conectarlo. */
     async testConnection(name, config) {
         try {
             const target = await loadProvider(name);
@@ -363,17 +351,18 @@ export const DataService = {
         try {
             storage()?.removeItem(DATA_KEY);
             storage()?.removeItem(TOMBSTONES_KEY);
-        } catch { /* sin almacenamiento */ }
+        } catch {}
         emitChange();
     },
 
+    /** Detiene la sincronización; los datos locales se conservan. */
     async disconnect() {
         clearTimeout(retryTimer);
         connected = false;
         await provider?.disconnect?.();
     },
 
-    /** Sólo para pruebas. */
+    /** Gancho de pruebas: reinicia el estado interno. */
     _reset() {
         data = emptyData();
         tombstones = emptyMap();

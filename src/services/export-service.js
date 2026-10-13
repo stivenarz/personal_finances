@@ -1,15 +1,3 @@
-/**
- * EXPORT SERVICE — genera reportes del mes en CSV, Excel (.xlsx) y PDF.
- *
- * La lógica está separada en tres capas, sin tocar el DOM salvo en la entrega:
- *   1. buildMonthlyReport(month)  → datos neutros del reporte (secciones con encabezados y filas)
- *   2. toCsv / toXlsx / toPdf     → un formateador por formato (puros respecto a la UI)
- *   3. exportReport(format, ...)  → arma el reporte, lo formatea y entrega el archivo
- *
- * Excel y PDF usan SheetJS y jsPDF (+ AutoTable), que se descargan bajo demanda la
- * primera vez que se exportan en ese formato (el service worker los deja en caché).
- * Todos los totales salen del ledger (calculados), nunca de valores guardados.
- */
 import { DataService } from './data-service.js';
 import {
     allTransactions, accountBalance, creditCardInfo, debtBalance, debtMonthlyPayment,
@@ -28,8 +16,6 @@ const LIBS = {
     jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
     autotable: 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'
 };
-
-// ---------------------------------------------------------------- 1. datos del reporte
 
 /**
  * Sección: { id, title, headers: string[], rows: any[][], money: number[] }
@@ -99,8 +85,6 @@ export function buildMonthlyReport(month) {
     return { title: 'Reporte financiero', month, generatedAt: new Date(), sections: sections.filter(s => s.rows.length > 0) };
 }
 
-// ---------------------------------------------------------------- 2. formateadores
-
 const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 /** Devuelve el texto CSV (con BOM para que Excel respete los acentos). */
@@ -109,7 +93,7 @@ export function toCsv(report) {
     report.sections.forEach(section => {
         lines.push([section.title.toUpperCase()], section.headers, ...section.rows, []);
     });
-    return '﻿' + lines.map(row => row.map(csvCell).join(',')).join('\n');
+    return '\ufeff' + lines.map(row => row.map(csvCell).join(',')).join('\n');
 }
 
 async function loadScript(url, globalCheck) {
@@ -125,7 +109,7 @@ async function loadScript(url, globalCheck) {
 }
 
 /** Devuelve un Blob .xlsx con una hoja por sección. */
-export async function toXlsx(report) {
+async function toXlsx(report) {
     await loadScript(LIBS.xlsx, () => !!window.XLSX);
     const { XLSX } = window;
 
@@ -143,7 +127,7 @@ export async function toXlsx(report) {
 }
 
 /** Devuelve un Blob PDF con una tabla por sección. */
-export async function toPdf(report) {
+async function toPdf(report) {
     await loadScript(LIBS.jspdf, () => !!window.jspdf?.jsPDF);
     await loadScript(LIBS.autotable, () => typeof window.jspdf.jsPDF.API.autoTable === 'function');
 
@@ -195,10 +179,8 @@ export async function toPdf(report) {
     return doc.output('blob');
 }
 
-// ---------------------------------------------------------------- 3. entrega
-
 /** Descarga un Blob como archivo. */
-export function downloadBlob(blob, filename) {
+function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

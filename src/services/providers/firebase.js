@@ -1,12 +1,3 @@
-/**
- * PROVEEDOR FIREBASE (Firestore + Auth anónima)
- *
- * Contrato idéntico al de providers/sheets.js (ver data-service.js). Cada colección
- * es una colección raíz de Firestore; cada registro un documento con los campos del
- * registro + `updatedAt` (ms, usado para resolver conflictos) + `deleted` (tombstone).
- *
- * El SDK se carga bajo demanda: en modo local o Sheets nunca se descarga.
- */
 import { COLLECTIONS } from '../collections.js';
 
 const SDK_VERSION = '12.19.0';
@@ -59,6 +50,14 @@ function fromDoc(docSnap) {
 
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
+/**
+ * Firestore con autenticación anónima. Cada colección de la app es una colección raíz y cada registro un
+ * documento con sus campos más `updatedAt` (ms) y `deleted` (borrado lógico). Los cambios llegan en tiempo
+ * real con `onSnapshot`; la caché persistente de Firestore encola las escrituras sin conexión.
+ * El SDK se descarga sólo cuando este proveedor está activo.
+ *
+ * @type {import('../data-service.js').Provider}
+ */
 export default {
     name: 'firebase',
 
@@ -131,7 +130,6 @@ export default {
 
         window.addEventListener('online', publish);
         window.addEventListener('offline', publish);
-        this._publish = publish;
         publish();
     },
 
