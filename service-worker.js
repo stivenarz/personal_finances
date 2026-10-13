@@ -9,8 +9,8 @@
  *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
  */
 
-const CACHE_VERSION = 'finanzas-v25';
-const RUNTIME_CACHE = 'finanzas-runtime-v25';
+const CACHE_VERSION = 'finanzas-v26';
+const RUNTIME_CACHE = 'finanzas-runtime-v26';
 
 // Rutas relativas al service worker: la app puede vivir en la raíz o en una subruta (GitHub Pages)
 const CORE_ASSETS = [

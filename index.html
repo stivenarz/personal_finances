@@ -6,17 +6,33 @@
     <meta name="description" content="Aplicación de gestión de finanzas personales con almacenamiento local y funcionamiento offline">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Finanzas">
 
     <title>Finanzas Personales - Control Integral</title>
 
+    <script>
+        // Modo "a sangre": con barra de estado translúcida la página se dibuja bajo ella y env(safe-area-inset-top) > 0.
+        // Con "default" vale 0 y se usa el teñido (.status-tint). Se mide tras el primer pintado (antes env puede valer 0).
+        (function () {
+            function detect() {
+                var probe = document.createElement('div');
+                probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;padding-top:env(safe-area-inset-top)';
+                document.documentElement.appendChild(probe);
+                var top = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+                probe.remove();
+                document.documentElement.classList.toggle('fullbleed', top > 0);
+            }
+            document.addEventListener('DOMContentLoaded', function () { requestAnimationFrame(detect); });
+            window.addEventListener('load', function () { detect(); setTimeout(detect, 600); });
+        })();
+    </script>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 
     <link rel="stylesheet" href="src/styles/main.css?v=8">
-    <link rel="stylesheet" href="src/styles/components.css?v=18">
+    <link rel="stylesheet" href="src/styles/components.css?v=20">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>

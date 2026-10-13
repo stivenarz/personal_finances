@@ -5,17 +5,19 @@
 
 [hidden] { display: none !important; }
 
-/* ---- PWA instalada (status-bar-style "default") ----
-   La ventana empieza bajo la barra de estado y llega hasta el borde inferior, así que la altura es la del
-   viewport (100%). (Con "black-translucent" iOS recorta la página a 812 pt y deja una franja abajo.)
-   Abajo se deja la zona segura para la línea de control del iPhone. */
+/* ---- PWA instalada (status-bar-style "black-translucent") ----
+   La página se dibuja bajo la barra de estado y llega hasta el borde inferior. Para ello no se usan capas
+   fijas (iOS las recorta al viewport): html/body no recortan, el contenedor mide 100vh (alto de pantalla)
+   dentro del propio documento y el menú y su fondo oscuro son "absolute" dentro de ese contenedor. */
 @media (display-mode: standalone) {
-    .container { height: 100%; padding-bottom: 0; }
+    html, body { height: auto; min-height: 100vh; overflow: visible; overscroll-behavior: none; }
+    .container { position: relative; height: 100vh; padding-bottom: 0; }
     .views-container { padding-bottom: calc(1px + env(safe-area-inset-bottom)); }
 }
 
 @media (display-mode: standalone) and (max-width: 768px) {
-    .sidebar { top: 0; bottom: 0; height: auto; }
+    .sidebar { position: absolute; top: 0; bottom: auto; height: 100vh; }
+    .sidebar-overlay { position: absolute; inset: 0 auto auto 0; width: 100%; height: 100vh; }
     .sidebar-footer { padding-bottom: calc(env(safe-area-inset-bottom) - 20px); }
 }
 
@@ -46,6 +48,11 @@
    superior. Esta banda fija (del color del dibujo) hace que la barra de estado se vea morada y continúe
    el encabezado y el menú, aunque la página empiece justo debajo de la barra. */
 .status-tint { display: none; }
+
+/* Modo a sangre (barra translúcida): el dibujo ya cubre la zona segura; no hace falta teñir ni fundir */
+html.fullbleed .status-tint { display: none !important; }
+html.fullbleed .top-header::before,
+html.fullbleed .sidebar-header::before { display: none !important; }
 
 @media (display-mode: standalone) and (max-width: 768px) {
     .status-tint {
