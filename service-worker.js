@@ -1,156 +1,118 @@
 /**
  * SERVICE WORKER - Soporte Offline
  * ================================
- * Proporciona funcionalidad offline y caché de activos
- *
- * Características:
- * - Caché de archivos principales
- * - Fallback a página offline
- * - Sincronización en background (PWA avanzada)
- * - Network-first para datos dinámicos
+ * - Precachea el "shell" de la app (HTML, CSS, módulos JS) para abrir sin conexión.
+ * - Estrategia network-first para los archivos de la app: si hay red se usa la versión
+ *   más nueva (y se actualiza la caché); sin red se sirve la caché.
+ * - Librerías de CDN (Chart.js, SDK de Firebase): se cachean al usarse la primera vez.
+ * - NO intercepta las llamadas de sincronización (Apps Script, Firestore): esas
+ *   deben ir siempre a la red para que los dispositivos se mantengan sincronizados.
  */
 
-const CACHE_VERSION = 'finanzas-v17';
-const RUNTIME_CACHE = 'finanzas-runtime-v17';
+const CACHE_VERSION = 'finanzas-v22';
+const RUNTIME_CACHE = 'finanzas-runtime-v22';
 
-// Archivos críticos que se cachean al instalar
 const CORE_ASSETS = [
   '/',
   '/index.html',
-  '/styles.css',
-  '/app.js',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
+  '/src/main.js',
+  '/src/styles/main.css',
+  '/src/styles/components.css',
+  '/src/core/utils.js',
+  '/src/core/state.js',
+  '/src/core/notifications.js',
+  '/src/core/modal.js',
+  '/src/core/ui.js',
+  '/src/core/router.js',
+  '/src/core/menu.js',
+  '/src/core/pwa.js',
+  '/src/services/collections.js',
+  '/src/services/config-service.js',
+  '/src/services/data-service.js',
+  '/src/services/export-service.js',
+  '/src/services/providers/local.js',
+  '/src/services/providers/firebase.js',
+  '/src/services/providers/sheets.js',
+  '/src/domain/ledger.js',
+  '/src/domain/migrations.js',
+  '/src/domain/transactions.js',
+  '/src/domain/accounts.js',
+  '/src/features/shared/options.js',
+  '/src/features/dashboard/index.js',
+  '/src/features/accounts/index.js',
+  '/src/features/accounts/forms.js',
+  '/src/features/expenses/index.js',
+  '/src/features/income/index.js',
+  '/src/features/debts/index.js',
+  '/src/features/savings/index.js',
+  '/src/features/planning/index.js',
+  '/src/features/transactions/index.js',
+  '/src/features/transactions/forms.js',
+  '/src/features/shared/export-dialog.js',
+  '/src/features/settings/index.js',
+  '/src/features/settings/categories.js',
+  '/src/features/settings/provider-panel.js',
+  '/src/features/settings/danger-zone.js'
 ];
 
-/**
- * EVENTO: Instalación del Service Worker
- * Cachea los archivos críticos para acceso offline
- */
-self.addEventListener('install', event => {
-  console.log('[SW] Installing Service Worker...');
+// Hosts externos cuyos archivos estáticos sí se cachean
+const CACHEABLE_CDNS = ['cdn.jsdelivr.net', 'www.gstatic.com'];
 
+self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then(cache => {
-        console.log('[SW] Caching core assets');
-        return cache.addAll(CORE_ASSETS);
-      })
-      .then(() => self.skipWaiting()) // Activar inmediatamente
-      .catch(error => console.error('[SW] Install error:', error))
+      // Una a una: si un archivo falla no se pierde todo el precacheo
+      .then(cache => Promise.all(CORE_ASSETS.map(asset => cache.add(asset).catch(error => console.warn('[SW] No se pudo precachear', asset, error)))))
+      .then(() => self.skipWaiting())
   );
 });
 
-/**
- * EVENTO: Activación del Service Worker
- * Limpia cachés antiguos
- */
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating Service Worker...');
-
   event.waitUntil(
     caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames
-            .filter(cacheName => cacheName !== CACHE_VERSION && cacheName !== RUNTIME_CACHE)
-            .map(cacheName => {
-              console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            })
-        );
-      })
-      .then(() => self.clients.claim()) // Tomar control de todas las pestañas
+      .then(names => Promise.all(
+        names
+          .filter(name => name !== CACHE_VERSION && name !== RUNTIME_CACHE)
+          .map(name => caches.delete(name))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-/**
- * EVENTO: Interceptar solicitudes (fetch)
- * Estrategia: Network-first para dinámico, Cache-first para estático
- */
 self.addEventListener('fetch', event => {
   const { request } = event;
+  if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
+  if (!url.protocol.startsWith('http')) return;
 
-  // Solo interceptar requests HTTP/HTTPS
-  if (!url.protocol.startsWith('http')) {
-    return;
-  }
+  const sameOrigin = url.origin === self.location.origin;
+  if (!sameOrigin && !CACHEABLE_CDNS.includes(url.hostname)) return; // sincronización: directo a la red
 
-  // Estrategia 1: Para activos estáticos (CSS, JS, HTML)
-  if (isStaticAsset(request.url)) {
-    event.respondWith(
-      caches.match(request)
-        .then(response => {
-          // Si está en caché, devolverlo
-          if (response) {
-            return response;
-          }
-
-          // Si no, intentar traer de red
-          return fetch(request)
-            .then(response => {
-              // Cachear la respuesta si es 200 OK
-              if (response && response.status === 200) {
-                const responseClone = response.clone();
-                caches.open(RUNTIME_CACHE)
-                  .then(cache => cache.put(request, responseClone));
-              }
-              return response;
-            })
-            .catch(() => caches.match('/offline.html'));
-        })
-    );
-  }
-  // Estrategia 2: Para datos dinámicos (JSON, API calls)
-  else {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          // Cachear respuesta si es 200 OK
-          if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE)
-              .then(cache => cache.put(request, responseClone));
-          }
-          return response;
-        })
-        .catch(() => {
-          // Si falla la red, intentar caché
-          return caches.match(request)
-            .then(response => response || caches.match('/offline.html'));
-        })
-    );
-  }
+  event.respondWith(networkFirst(request));
 });
 
-/**
- * Determina si una URL es un activo estático
- * @param {string} url - URL a verificar
- * @returns {boolean}
- */
-function isStaticAsset(url) {
-  return /\.(js|css|html|json|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|webp)(\?.*)?$/.test(url);
+async function networkFirst(request) {
+  try {
+    // 'no-cache': siempre revalida contra el servidor (evita servir una versión vieja de la caché HTTP)
+    const response = await fetch(request, { cache: 'no-cache' });
+    if (response && response.status === 200) {
+      const copy = response.clone();
+      caches.open(RUNTIME_CACHE).then(cache => cache.put(request, copy));
+    }
+    return response;
+  } catch (error) {
+    const cached = (await caches.match(request)) || (await caches.match(request, { ignoreSearch: true }));
+    if (cached) return cached;
+    if (request.mode === 'navigate') return caches.match('/offline.html');
+    throw error;
+  }
 }
 
-/**
- * EVENTO: Mensajes desde la página principal
- * Para comunicación bidireccional SW ↔ Página
- */
 self.addEventListener('message', event => {
-  console.log('[SW] Message received:', event.data);
-
-  // Limpiar caché si se solicita
-  if (event.data.action === 'clearCache') {
-    caches.delete(RUNTIME_CACHE)
-      .then(() => console.log('[SW] Runtime cache cleared'));
-  }
-
-  // Sincronización manual
-  if (event.data.action === 'sync') {
-    console.log('[SW] Sync requested');
-    // Implementar sincronización de datos pendientes
+  if (event.data && event.data.action === 'clearCache') {
+    caches.delete(RUNTIME_CACHE);
   }
 });
-
-console.log('[SW] Service Worker loaded');

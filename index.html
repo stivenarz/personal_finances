@@ -15,12 +15,11 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='white' text-anchor='middle'>💰</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='50'/><text x='90' y='130' font-size='100' fill='white' text-anchor='middle'>💰</text></svg>">
 
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="/src/styles/main.css?v=5">
+    <link rel="stylesheet" href="/src/styles/components.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-    <!-- Loading Spinner -->
     <div class="loading-spinner" id="loading-spinner">
         <div class="spinner"></div>
         <p>Cargando datos...</p>
@@ -28,620 +27,59 @@
 
     <div class="container">
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
-        <!-- Sidebar Navigation -->
+
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1>💰 Finanzas</h1>
-                <button class="sidebar-close" id="sidebar-close">✕</button>
+                <button class="sidebar-close" id="sidebar-close" aria-label="Cerrar menú">✕</button>
             </div>
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-view="dashboard">
-                    <span class="icon">📊</span> Dashboard
-                </a>
-                <a href="#" class="nav-item" data-view="gastos">
-                    <span class="icon">💳</span> Gastos
-                </a>
-                <a href="#" class="nav-item" data-view="ingresos">
-                    <span class="icon">💵</span> Ingresos
-                </a>
-                <a href="#" class="nav-item" data-view="deudas">
-                    <span class="icon">📋</span> Deudas
-                </a>
-                <a href="#" class="nav-item" data-view="ahorros">
-                    <span class="icon">🎯</span> Ahorros
-                </a>
-                <a href="#" class="nav-item" data-view="planificacion">
-                    <span class="icon">🗓️</span> Planificación
-                </a>
-                <a href="#" class="nav-item" data-view="transacciones">
-                    <span class="icon">📝</span> Transacciones
-                </a>
-                <a href="#" class="nav-item" data-view="configuracion">
-                    <span class="icon">⚙️</span> Configuración
-                </a>
+                <a href="#" class="nav-item active" data-view="dashboard"><span class="icon">📊</span> Dashboard</a>
+                <a href="#" class="nav-item" data-view="cuentas"><span class="icon">🏦</span> Cuentas</a>
+                <a href="#" class="nav-item" data-view="gastos"><span class="icon">💳</span> Gastos</a>
+                <a href="#" class="nav-item" data-view="ingresos"><span class="icon">💵</span> Ingresos</a>
+                <a href="#" class="nav-item" data-view="deudas"><span class="icon">📋</span> Deudas</a>
+                <a href="#" class="nav-item" data-view="ahorros"><span class="icon">🎯</span> Ahorros</a>
+                <a href="#" class="nav-item" data-view="planificacion"><span class="icon">🗓️</span> Planificación</a>
+                <a href="#" class="nav-item" data-view="transacciones"><span class="icon">📝</span> Transacciones</a>
+                <a href="#" class="nav-item" data-view="configuracion"><span class="icon">⚙️</span> Configuración</a>
             </nav>
             <div class="sidebar-footer">
                 <span class="sync-badge" data-sync-badge>Cargando...</span>
-                <p>Version 1</p>
+                <p>Versión 2</p>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="top-header">
                 <div class="header-left">
-                    <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+                    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Abrir menú" aria-expanded="false">☰</button>
                     <h2 id="view-title">Dashboard</h2>
                 </div>
                 <div class="header-right">
                     <div class="date-filter">
-                        <label>Mes:</label>
+                        <label for="month-filter">Mes:</label>
                         <input type="month" id="month-filter" class="input-control">
                     </div>
                     <button class="btn btn-export" id="export-btn">📥 Exportar</button>
                 </div>
             </header>
 
-            <!-- Views Container -->
+            <!-- Cada vista la construye su componente en src/features/<vista>/ -->
             <div class="views-container">
-
-                <!-- DASHBOARD VIEW -->
-                <div class="view" id="view-dashboard">
-                    <div class="dashboard-grid">
-                        <!-- KPIs -->
-                        <div class="kpi-container">
-                            <div class="kpi-card" style="border-left-color: #10b981;">
-                                <div class="kpi-icon">💵</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Ingresos</div>
-                                    <div class="kpi-value" id="kpi-ingresos">$0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #ef4444;">
-                                <div class="kpi-icon">💳</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Egresos</div>
-                                    <div class="kpi-value" id="kpi-egresos">$0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #3b82f6;">
-                                <div class="kpi-icon">📈</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Balance</div>
-                                    <div class="kpi-value" id="kpi-balance">$0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #f59e0b;">
-                                <div class="kpi-icon">💾</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Tasa Ahorro</div>
-                                    <div class="kpi-value" id="kpi-ahorro">0%</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #8b5cf6;">
-                                <div class="kpi-icon">🏦</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Saldo Disponible</div>
-                                    <div class="kpi-value" id="kpi-saldo-disponible">$0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #ec4899;">
-                                <div class="kpi-icon">🎯</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Total Ahorros</div>
-                                    <div class="kpi-value" id="kpi-total-ahorros">$0</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Charts -->
-                        <div class="charts-container">
-                            <div class="chart-card">
-                                <h3>Egresos por Categorías</h3>
-                                <canvas id="chart-gastos-categoria"></canvas>
-                            </div>
-                            <div class="chart-card">
-                                <h3>Ingresos vs Egresos</h3>
-                                <canvas id="chart-ingresos-egresos"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Presupuesto vs Real -->
-                        <div class="budget-card">
-                            <h3>Presupuesto vs Gasto Real</h3>
-                            <div class="budget-list" id="budget-comparison">
-                                <!-- Dinámico -->
-                            </div>
-                        </div>
-
-                        <!-- Deudas Próximas -->
-                        <div class="debt-card">
-                            <h3>Deudas Próximas a Pagar</h3>
-                            <div class="debt-list" id="debt-pending">
-                                <!-- Dinámico -->
-                            </div>
-                        </div>
-
-                        <!-- Metas de Ahorro -->
-                        <div class="goals-card">
-                            <h3>Metas de Ahorro</h3>
-                            <div class="goals-list" id="savings-goals">
-                                <!-- Dinámico -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- GASTOS VIEW -->
-                <div class="view" id="view-gastos">
-                    <div class="form-section">
-                        <h3>Registrar Gasto</h3>
-                        <form id="form-gasto" class="form-container">
-                            <div class="form-group">
-                                <label>Fecha</label>
-                                <input type="date" id="gasto-fecha" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Categoría</label>
-                                <select id="gasto-categoria" required>
-                                    <option value="">Seleccionar categoría</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Descripción</label>
-                                <input type="text" id="gasto-descripcion" placeholder="Ej: Mercado Éxito">
-                            </div>
-                            <div class="form-group">
-                                <label>Monto ($)</label>
-                                <input type="text" id="gasto-monto" inputmode="decimal" placeholder="0" required min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Cuenta de Salida</label>
-                                <select id="gasto-cuenta" required>
-                                    <option value="">Seleccionar cuenta</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Registrar Gasto</button>
-                        </form>
-                    </div>
-
-                    <div class="list-section">
-                        <h3>Gastos Registrados</h3>
-                        <div class="filter-controls">
-                            <input type="text" id="gastos-search" placeholder="Buscar por descripción..." class="input-control">
-                            <select id="gastos-filter-categoria" class="input-control">
-                                <option value="">Todas las categorías</option>
-                            </select>
-                        </div>
-                        <div class="transaction-list" id="list-gastos">
-                            <!-- Dinámico -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- INGRESOS VIEW -->
-                <div class="view" id="view-ingresos">
-                    <div class="form-section">
-                        <h3>Registrar Ingreso</h3>
-                        <form id="form-ingreso" class="form-container">
-                            <div class="form-group">
-                                <label>Fecha</label>
-                                <input type="date" id="ingreso-fecha" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Tipo de Ingreso</label>
-                                <select id="ingreso-tipo" required>
-                                    <option value="">Seleccionar tipo</option>
-                                    <option value="Principal">Ingresos Principales</option>
-                                    <option value="Secundario">Ingresos Secundarios/Extras</option>
-                                    <option value="Inversiones">Rentas e Inversiones</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Descripción</label>
-                                <input type="text" id="ingreso-descripcion" placeholder="Ej: Nómina" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Monto ($)</label>
-                                <input type="text" id="ingreso-monto" inputmode="decimal" placeholder="0" required min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Cuenta Destino</label>
-                                <select id="ingreso-cuenta" required>
-                                    <option value="">Seleccionar cuenta</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Registrar Ingreso</button>
-                        </form>
-                    </div>
-
-                    <div class="list-section">
-                        <h3>Ingresos Registrados</h3>
-                        <div class="filter-controls">
-                            <input type="text" id="ingresos-search" placeholder="Buscar por descripción..." class="input-control">
-                            <select id="ingresos-filter-tipo" class="input-control">
-                                <option value="">Todos los tipos</option>
-                            </select>
-                        </div>
-                        <div class="transaction-list" id="list-ingresos">
-                            <!-- Dinámico -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DEUDAS VIEW -->
-                <div class="view" id="view-deudas">
-                    <div class="form-section">
-                        <h3>Registrar Deuda</h3>
-                        <form id="form-deuda" class="form-container">
-                            <div class="form-group">
-                                <label>Entidad/Acreedor</label>
-                                <input type="text" id="deuda-entidad" placeholder="Ej: TC Bancolombia" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Saldo Inicial ($)</label>
-                                <input type="text" id="deuda-inicial" inputmode="decimal" placeholder="0" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Saldo Actual ($)</label>
-                                <input type="text" id="deuda-saldo" inputmode="decimal" placeholder="0" required min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Tasa de Interés Anual (%) - Opcional</label>
-                                <input type="number" id="deuda-interes" placeholder="Ej: 18.5" min="0" step="0.1">
-                            </div>
-                            <div class="form-group">
-                                <label>Plazo en Meses - Opcional</label>
-                                <input type="number" id="deuda-plazo" placeholder="Ej: 24" min="1" step="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Cuota Mensual ($)</label>
-                                <input type="text" id="deuda-cuota" inputmode="decimal" placeholder="Se calcula automáticamente si completas tasa e plazo" min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Titular</label>
-                                <input type="text" id="deuda-titular" placeholder="Nombre" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Fecha de Pago (día del mes)</label>
-                                <input type="number" id="deuda-fecha-pago" placeholder="Ej: 15" min="1" max="31">
-                            </div>
-                            <button type="submit" class="btn btn-primary">Registrar Deuda</button>
-                        </form>
-                    </div>
-
-                    <div class="list-section">
-                        <h3>Deudas Activas</h3>
-                        <div class="debt-details-container" id="list-deudas">
-                            <!-- Dinámico -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AHORROS VIEW -->
-                <div class="view" id="view-ahorros">
-                    <div class="view-header">
-                        <div class="kpi-container" style="margin-bottom: 30px;">
-                            <div class="kpi-card" style="border-left-color: #ec4899; flex: 1;">
-                                <div class="kpi-icon">🎯</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Total Ahorros</div>
-                                    <div class="kpi-value" id="kpi-ahorros-total">$0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #06b6d4; flex: 1;">
-                                <div class="kpi-icon">📊</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Metas Activas</div>
-                                    <div class="kpi-value" id="kpi-metas-activas">0</div>
-                                </div>
-                            </div>
-                            <div class="kpi-card" style="border-left-color: #10b981; flex: 1;">
-                                <div class="kpi-icon">✅</div>
-                                <div class="kpi-content">
-                                    <div class="kpi-label">Metas Completadas</div>
-                                    <div class="kpi-value" id="kpi-metas-completadas">0</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="list-section">
-                        <h3>Registrar Nueva Meta</h3>
-                        <form id="form-meta-ahorro" class="form-container">
-                            <div class="form-group">
-                                <label>Descripción</label>
-                                <input type="text" id="meta-ahorro-descripcion" placeholder="Ej: Viaje a Cartagena" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Monto a Ahorrar ($)</label>
-                                <input type="text" id="meta-ahorro-monto" inputmode="decimal" placeholder="0" required min="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Fecha Meta</label>
-                                <input type="date" id="meta-ahorro-fecha" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Crear Meta</button>
-                        </form>
-                    </div>
-
-                    <div class="list-section">
-                        <h3>Mis Metas de Ahorro</h3>
-                        <div class="goals-list" id="list-metas-ahorros">
-                            <!-- Dinámico -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TRANSACCIONES VIEW -->
-                <div class="view" id="view-transacciones">
-                    <div class="filter-controls">
-                        <input type="text" id="trans-search" placeholder="Buscar transacciones..." class="input-control">
-                        <select id="trans-filter-tipo" class="input-control">
-                            <option value="">Todos los tipos</option>
-                            <option value="Ingreso">Ingresos</option>
-                            <option value="Egreso">Egresos</option>
-                        </select>
-                        <select id="trans-filter-cuenta" class="input-control">
-                            <option value="">Todas las cuentas</option>
-                        </select>
-                    </div>
-                    <div class="transactions-list" id="list-transacciones">
-                        <!-- Dinámico -->
-                    </div>
-                </div>
-
-                <!-- CONFIGURACION VIEW -->
-                <div class="view" id="view-planificacion">
-                    <div class="plan-grid">
-                        <section class="plan-card">
-                            <h3>Ingresos fijos del mes</h3>
-                            <p class="plan-help">Son una proyección para planificar. Solo los ingresos registrados manualmente cuentan como ingreso real.</p>
-                            <form id="form-plan-ingresos" class="plan-form">
-                                <label>Ingresos fijos del mes ($)
-                                    <input type="number" id="plan-ingresos-fijos" min="0" step="0.01" required>
-                                </label>
-                                <label>Frecuencia de cobro
-                                    <select id="plan-frecuencia">
-                                        <option value="mensual">Mensual</option>
-                                        <option value="quincenal">Quincenal</option>
-                                    </select>
-                                </label>
-                                <label>Día de cobro
-                                    <input type="number" id="plan-dia-1" min="1" max="31" required>
-                                </label>
-                                <label id="plan-dia-2-wrap" class="hidden">Segundo día de cobro (quincena)
-                                    <input type="number" id="plan-dia-2" min="1" max="31">
-                                </label>
-                                <button type="submit" class="btn btn-primary">Guardar ingresos fijos</button>
-                            </form>
-                        </section>
-
-                        <section class="plan-card">
-                            <h3>Gastos fijos</h3>
-                            <form id="form-gasto-fijo" class="plan-form">
-                                <label>Nombre
-                                    <input type="text" id="fijo-nombre" placeholder="Ej: Arriendo" required>
-                                </label>
-                                <label>Monto ($)
-                                    <input type="number" id="fijo-monto" min="0" step="0.01" required>
-                                </label>
-                                <label>Día de pago
-                                    <input type="number" id="fijo-dia" min="1" max="31" required>
-                                </label>
-                                <button type="submit" class="btn btn-primary">Agregar gasto fijo</button>
-                            </form>
-                            <div id="list-gastos-fijos" class="plan-list"></div>
-                        </section>
-
-                        <section class="plan-card plan-wide">
-                            <h3>Análisis del mes</h3>
-                            <div id="plan-kpis" class="plan-kpis"></div>
-                            <div id="plan-alerts"></div>
-                        </section>
-
-                        <section class="plan-card plan-wide">
-                            <h3>Planes de pago</h3>
-                            <div class="plan-toolbar">
-                                <select id="plan-selector"></select>
-                                <button type="button" class="btn btn-secondary" id="plan-update">Actualizar plan</button>
-                                <button type="button" class="btn btn-danger" id="plan-delete">Eliminar plan</button>
-                            </div>
-                            <div id="plan-obligations" class="plan-list"></div>
-                            <div class="plan-toolbar">
-                                <input type="text" id="plan-name" placeholder="Nombre del nuevo plan">
-                                <button type="button" class="btn btn-primary" id="plan-save">Guardar como plan</button>
-                            </div>
-                        </section>
-
-                        <section class="plan-card plan-wide">
-                            <h3>Calendario de pagos</h3>
-                            <div id="plan-calendar" class="plan-calendar"></div>
-                        </section>
-                    </div>
-                </div>
-
-                <div class="view" id="view-configuracion">
-                    <div class="config-grid">
-                        <!-- Cuentas -->
-                        <div class="config-section">
-                            <h3>Gestionar Cuentas</h3>
-                            <form id="form-cuenta" class="form-container">
-                                <div class="form-group">
-                                    <label>Nombre de Cuenta</label>
-                                    <input type="text" id="cuenta-nombre" placeholder="Ej: Ahorros Bancolombia" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tipo</label>
-                                    <select id="cuenta-tipo" required>
-                                        <option value="Corriente">Corriente</option>
-                                        <option value="Tarjeta Crédito">Tarjeta Crédito</option>
-                                        <option value="Efectivo">Efectivo</option>
-                                        <option value="Ahorros">Ahorros</option>
-                                        <option value="Otro">Otro</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Agregar Cuenta</button>
-                            </form>
-
-                            <div class="accounts-list" id="list-cuentas">
-                                <!-- Dinámico -->
-                            </div>
-                        </div>
-
-                        <!-- Categorías -->
-                        <div class="config-section">
-                            <h3>Gestionar Categorías</h3>
-                            <form id="form-categoria" class="form-container">
-                                <div class="form-group">
-                                    <label>Nombre Categoría</label>
-                                    <input type="text" id="categoria-nombre" placeholder="Ej: Alimentación" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tipo</label>
-                                    <select id="categoria-tipo" required>
-                                        <option value="Egreso">Egreso</option>
-                                        <option value="Ingreso">Ingreso</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Presupuesto Mensual ($)</label>
-                                    <input type="text" id="categoria-presupuesto" inputmode="decimal" placeholder="0" min="0">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Agregar Categoría</button>
-                            </form>
-                            <div class="categories-list" id="list-categorias">
-                                <!-- Dinámico -->
-                            </div>
-                        </div>
-
-                        <!-- Firebase Configuration -->
-                        <div class="config-section">
-                            <h3>🔥 Configuración Firebase</h3>
-
-                            <!-- Estado de sincronización -->
-                            <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
-                                    <div style="flex: 1;">
-                                        <strong style="display: block; margin-bottom: 8px;">Estado de sincronización</strong>
-                                        <span class="sync-badge" data-sync-badge id="db-mode-status">Cargando...</span>
-                                        <span style="display: block; color: var(--text-secondary); font-size: 12px; margin-top: 8px;">Los datos se guardan en este dispositivo y se sincronizan automáticamente con la nube cuando hay credenciales.</span>
-                                    </div>
-                                    <button type="button" class="btn btn-secondary" id="sync-data-btn" style="white-space: nowrap;">
-                                        🔄 Sincronizar
-                                    </button>
-                                </div>
-                            </div>
-
-                            <form id="form-firebase" class="form-container">
-                                <div class="form-group">
-                                    <label>API Key</label>
-                                    <input type="text" id="firebase-api-key" placeholder="AIzaSy..." required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Project ID</label>
-                                    <input type="text" id="firebase-project-id" placeholder="tu-proyecto-id" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Auth Domain</label>
-                                    <input type="text" id="firebase-auth-domain" placeholder="tu-proyecto.firebaseapp.com" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Storage Bucket</label>
-                                    <input type="text" id="firebase-storage-bucket" placeholder="tu-proyecto.firebasestorage.app" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Messaging Sender ID</label>
-                                    <input type="text" id="firebase-messaging-sender-id" placeholder="123456789" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>App ID</label>
-                                    <input type="text" id="firebase-app-id" placeholder="1:123456789:web:abc123def456" required>
-                                </div>
-                                <small style="color: var(--text-secondary); margin-top: 10px; display: block;">
-                                    ℹ️ Obtén estos valores de tu Configuración del Proyecto en Firebase Console
-                                </small>
-                                <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Guardar Configuración</button>
-                                <button type="button" class="btn btn-secondary" id="firebase-test-btn">Probar Conexión</button>
-                                <button type="button" class="btn btn-secondary" onclick="window.open('firebase-guide.html', 'firebase_guide', 'width=1000,height=800')">
-                                    📖 Ver Guía Firebase
-                                </button>
-                            </form>
-                            <div id="firebase-status" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;">
-                                <div id="firebase-status-text"></div>
-                            </div>
-                        </div>
-
-                        <!-- Delete All Data -->
-                        <div class="config-section" style="border: 2px solid var(--danger); background: rgba(255, 76, 76, 0.05);">
-                            <h3 style="color: var(--danger);">⚠️ Zona de Peligro</h3>
-                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
-                                Esta acción eliminará TODOS los datos de la aplicación, incluyendo:
-                            </p>
-                            <ul style="color: var(--text-secondary); font-size: 14px; margin-left: 20px; margin-bottom: 15px;">
-                                <li>Todas las transacciones</li>
-                                <li>Todas las cuentas</li>
-                                <li>Todas las categorías</li>
-                                <li>Todos los datos guardados localmente</li>
-                                <li>Todos los datos en Firebase (si está conectado)</li>
-                            </ul>
-                            <button type="button" class="btn btn-danger" id="delete-all-data-btn" style="width: 100%;">
-                                🗑️ Borrar TODOS los Datos
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-
+                <div class="view" id="view-dashboard"></div>
+                <div class="view" id="view-cuentas"></div>
+                <div class="view" id="view-gastos"></div>
+                <div class="view" id="view-ingresos"></div>
+                <div class="view" id="view-deudas"></div>
+                <div class="view" id="view-ahorros"></div>
+                <div class="view" id="view-planificacion"></div>
+                <div class="view" id="view-transacciones"></div>
+                <div class="view" id="view-configuracion"></div>
             </div>
         </main>
     </div>
 
-    <!-- Service Worker Registration para PWA -->
-    <script>
-        /**
-         * Registrar Service Worker para funcionalidad offline
-         * El service worker cachea archivos y proporciona acceso offline
-         */
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        console.log('[App] Service Worker registrado exitosamente:', registration);
-                        // Verificar actualizaciones cada 10 segundos
-                        setInterval(() => registration.update(), 10000);
-                    })
-                    .catch(error => console.error('[App] Error registrando Service Worker:', error));
-            });
-
-            // Detectar cuando hay una actualización disponible
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                console.log('[App] Nueva versión disponible - recargando');
-                // Recargar la página para usar la nueva versión
-                location.reload();
-            });
-
-            // Detectar cambios de conexión
-            window.addEventListener('online', () => {
-                console.log('[App] ✅ Conexión restaurada');
-                // Intentar sincronizar datos
-                if (navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({ action: 'sync' });
-                }
-            });
-
-            window.addEventListener('offline', () => {
-                console.log('[App] 📡 Sin conexión - usando caché');
-            });
-        } else {
-            console.warn('[App] Service Workers no soportados en este navegador');
-        }
-    </script>
-
-    <script type="module">
-        import './firebase-config.js?v=3';
-        import './app.js?v=6';
-    </script>
+    <script type="module" src="/src/main.js?v=1"></script>
 </body>
 </html>

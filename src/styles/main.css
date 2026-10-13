@@ -82,7 +82,6 @@ body {
     height: 100dvh;
     overflow: hidden;
     position: relative;
-    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .sidebar-overlay {
@@ -106,12 +105,6 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.mobile-menu-toggle.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
 }
 
 /* SIDEBAR */
@@ -1144,6 +1137,7 @@ body {
     .mobile-menu-toggle {
         display: flex;
         position: relative;
+        z-index: 1; /* por debajo del menú (z-index 999) y del overlay: queda oculto detrás al abrirse */
         top: auto; 
         left: auto;
         width: 40px;
@@ -1170,7 +1164,7 @@ body {
         top: env(safe-area-inset-top);
         width: 75%;
         max-width: 260px;
-        height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        height: calc(100dvh - env(safe-area-inset-top));
         z-index: 999;
         transform: translateX(-100%);
     }
@@ -1233,7 +1227,7 @@ body {
     }
 
     .views-container {
-        padding: 12px 12px 30px 12px;
+        padding: 12px 12px 12px 12px;
     }
 
     .top-header {

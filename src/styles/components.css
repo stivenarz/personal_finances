@@ -1,0 +1,195 @@
+/* ==========================================================================
+   Componentes añadidos en la v2: formularios modales, cuentas/tarjetas,
+   panel de base de datos y utilidades compartidas por las vistas.
+   ========================================================================== */
+
+[hidden] { display: none !important; }
+
+/* ---- PWA: sin espacio sobrante en la parte inferior ---- */
+@media (display-mode: standalone) {
+    .container { padding-bottom: 0; }
+    .views-container { padding-bottom: 8px; }
+}
+
+/* ---- Barra de sección con botón "Agregar" ---- */
+.section-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.section-toolbar h3 { margin: 0; }
+.section-toolbar .btn { white-space: nowrap; }
+
+.empty-state {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 28px 12px;
+}
+
+.badge-auto {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: var(--warning-light);
+    color: #92400e;
+    white-space: nowrap;
+}
+
+.btn-block { width: 100%; }
+
+/* ---- Modales ---- */
+.modal-hint {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.modal-error {
+    margin: 4px 0 0;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--danger-light);
+    color: var(--danger);
+    font-size: 13px;
+}
+
+.modal-card .modal-note strong { color: var(--text-primary); }
+
+/* ---- Cuentas y tarjetas de crédito ---- */
+.accounts-kpis,
+.savings-kpis { margin-bottom: 24px; }
+
+.accounts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.account-item .account-main {
+    display: flex;
+    flex: 1 1 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.account-balance.negative { color: var(--danger); }
+
+.account-item.credit-card {
+    border-left-color: #8b5cf6;
+    background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+}
+
+.cc-usage { flex: 1 1 100%; }
+
+.cc-usage-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+.cc-usage-fill {
+    height: 100%;
+    background: #8b5cf6;
+    transition: width 0.3s ease;
+}
+
+.cc-usage-fill.high { background: var(--danger); }
+
+.cc-usage-legend {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.cc-details {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px 16px;
+    font-size: 13px;
+}
+
+.cc-details dt { color: var(--text-secondary); font-size: 12px; }
+.cc-details dd { font-weight: 600; }
+.cc-details .urgent dd { color: var(--danger); }
+
+/* ---- Transacciones ---- */
+.transaction-row.transferencia { border-left-color: var(--text-secondary); }
+.tx-title { font-weight: 500; }
+.tx-meta { font-size: 12px; color: var(--text-secondary); }
+.tx-amount { font-weight: 600; }
+.debt-amount { font-weight: 600; color: var(--warning); }
+
+/* ---- Metas de ahorro ---- */
+.goal-card {
+    border-left: 4px solid var(--primary);
+    padding: 20px;
+    margin-bottom: 15px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+}
+
+.goal-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; flex-wrap: wrap; }
+.goal-card-info { flex: 1 1 200px; }
+.goal-card-info h4 { margin: 0 0 10px; font-size: 16px; }
+.goal-card-info p { margin: 6px 0; color: var(--text-secondary); font-size: 14px; }
+.goal-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.goal-card .goal-progress { width: 100%; height: 8px; margin-top: 14px; background: var(--dark-light); border-radius: 4px; overflow: hidden; }
+.goal-card .goal-progress > div { height: 100%; }
+.goal-card-percent { margin: 10px 0 0; text-align: right; color: var(--text-secondary); font-size: 12px; }
+
+/* ---- Planificación ---- */
+.plan-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.plan-card-head h3 { margin: 0; }
+
+/* ---- Panel de base de datos ---- */
+.sync-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.sync-box-info { flex: 1; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.sync-box-info small { color: var(--text-secondary); font-size: 12px; }
+
+.provider-panel { margin-top: 16px; }
+.provider-help { display: block; color: var(--text-secondary); font-size: 13px; margin: 8px 0 12px; }
+.provider-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.provider-actions .btn { text-decoration: none; text-align: center; }
+
+.provider-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.provider-status.success { background: var(--secondary-light); color: var(--secondary); }
+.provider-status.error { background: var(--danger-light); color: var(--danger); }
+
+.config-danger {
+    border: 2px solid var(--danger);
+    background: rgba(255, 76, 76, 0.05);
+}
+
+.config-danger h3 { color: var(--danger); }
+.danger-text { color: var(--text-secondary); font-size: 14px; margin-bottom: 12px; }
+ul.danger-text { margin-left: 20px; }
+
+@media (max-width: 768px) {
+    .config-grid { grid-template-columns: 1fr; }
+    .section-toolbar { flex-wrap: wrap; }
+}

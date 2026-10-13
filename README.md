@@ -1,252 +1,77 @@
-# 💰 Finanzas Personales - Control Integral
+# 💰 Finanzas Personales
 
-Aplicación web moderna para gestionar tus finanzas personales con arquitectura limpia y sin dependencias externas. Los datos se almacenan localmente en tu navegador.
+Aplicación web (PWA) para gestionar tus finanzas personales. Funciona 100 % en local y offline; opcionalmente sincroniza en vivo entre dispositivos con **Firebase** o **Google Sheets**. Sin build ni dependencias: JavaScript con módulos ES.
 
-## ✨ Características Principales
+## ✨ Funcionalidades
 
-### 📊 Dashboard Integral
-- **KPIs en tiempo real**: Ingresos, Egresos, Balance, Tasa de Ahorro, Saldo Disponible, Total Ahorros
-- **Gráficos dinámicos**: Egresos por categoría, Ingresos vs Egresos
-- **Filtro central de mes**: Todos los datos respetan el mes seleccionado
-- **Actualización automática**: Los KPIs se recalculan al instante
+- **Dashboard**: KPIs del mes, gráficos, presupuesto vs gasto real, próximos pagos (deudas y tarjetas) y metas.
+- **Cuentas** (vista propia): corrientes, efectivo, ahorros y **tarjetas de crédito**.
+  - Tarjeta: cupo y tasa editables (mensual nominal o efectiva anual; los cambios rigen desde la fecha en que se editan), día de corte y de pago, cupo usado/disponible, gastos y pagos con la tarjeta, **intereses calculados por ciclo** y fecha límite de pago.
+  - Eliminar una cuenta valida el saldo: con deuda se bloquea; con saldo a favor se transfiere a otra cuenta.
+- **Gastos / Ingresos / Transacciones**: alta y edición siempre en **formularios modales**.
+- **Deudas**, **Ahorros** (metas con abonos y retiros) y **Planificación** (ingresos y gastos fijos, planes de pago, calendario de saldo; incluye las tarjetas como obligación).
+- **Exportar** el reporte del mes en **CSV, Excel (.xlsx) o PDF** (resumen, transacciones, cuentas, tarjetas, deudas y metas), a cargo de `services/export-service.js`.
+- **Configuración**: categorías, base de datos (Solo local / Firebase / Google Sheets) y zona de peligro.
+- **Nada de totales guardados**: saldos, avance de metas, saldo de deudas e intereses se calculan siempre desde los movimientos, así todos los dispositivos coinciden.
 
-### 💳 Gestión de Gastos
-- Registro de gastos con categoría, descripción, monto y cuenta
-- Lista completa de gastos con búsqueda por descripción
-- Filtros por tipo y cuenta
-- Categorización automática
+## 🚀 Inicio rápido
 
-### 💵 Gestión de Ingresos
-- Múltiples tipos de ingresos (Principal, Secundario, Inversiones, Rentas, etc.)
-- Registro detallado con fecha, descripción y cuenta destino
-- Historial completo filtrable
-
-### 📋 Gestión de Deudas
-- Registro de deudas con saldo inicial y actual
-- Cálculo automático de cuotas pendientes
-- Barra de progreso visual
-- Registro individual de pagos
-- Historial de transacciones por deuda
-
-### 🎯 Metas de Ahorro
-- Crear metas con monto objetivo y fecha límite
-- Depósitos y retiros de metas
-- Seguimiento de progreso
-- Gestión desde cualquier tipo de cuenta
-
-### ⚙️ Configuración Completa
-- **Gestionar Cuentas**: Añadir/eliminar cuentas (Corriente, Tarjeta, Efectivo, Ahorros)
-- **Gestionar Categorías**: Crear categorías personalizadas y asignar presupuestos
-- **Exportar Datos**: Descargar datos en formato Excel
-
-### 📱 Diseño Responsive
-- Interfaz completamente responsive para móvil, tablet y desktop
-- Menú colapsable con navegación intuitiva
-- Header optimizado para pantallas pequeñas
-- Cierre automático del menú al perder foco
-
-## 🏗️ Arquitectura Técnica
-
-```
-┌─────────────────────────────────────┐
-│         HTML5 + CSS3                 │
-│    Interface Responsiva              │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│      JavaScript Vanilla              │
-│   - app.js (3000+ líneas)           │
-│   - Lógica de negocio pura          │
-│   - Sin frameworks externos         │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│    LocalStorage (Almacenamiento)    │
-│   - Datos persistentes por usuario  │
-│   - Backup/Restore opcional         │
-└─────────────────────────────────────┘
-```
-
-### Dependencias Externas
-- **Chart.js**: Gráficos dinámicos
-- **Papa Parse**: Parseo de CSV (opcional)
-
-## 🚀 Inicio Rápido
-
-### Instalación
-```bash
-# 1. Clonar o descargar el proyecto
-git clone https://github.com/stivenarz/personal_finances.git
-cd personal_finances
-
-# 2. Abrir en navegador (requiere servidor local)
-python3 -m http.server 8000
-# O usar cualquier servidor local
-
-# 3. Navegar a
-http://localhost:8000
-```
-
-### Primer Uso
-1. Abre la aplicación en tu navegador
-2. Crea cuentas bancarias en Configuración
-3. Define categorías de gastos (Alimentación, Transporte, etc.)
-4. Comienza a registrar transacciones
-5. Visualiza tus datos en el Dashboard
-
-## 💾 Almacenamiento de Datos
-
-### LocalStorage
-- Todos los datos se guardan automáticamente en localStorage del navegador
-- Ubicación: `window.localStorage['app_offline_data']`
-- Estructura:
-  ```json
-  {
-    "transactions": [],
-    "debts": [],
-    "accounts": [],
-    "categories": [],
-    "goals": [],
-    "debtPayments": []
-  }
-  ```
-
-### Persistencia
-- Los datos persisten entre sesiones
-- Cada navegador/dispositivo tiene su propia copia
-- Recomendado hacer backups periódicos (Exportar)
-
-## 📂 Estructura del Proyecto
-
-```
-personal-finances/
-├── index.html           # Estructura principal de la aplicación
-├── app.js              # Lógica de negocio (3000+ líneas)
-├── styles.css          # Estilos responsive (1000+ líneas)
-├── firebase-guide.html # Guía de Firebase (referencia)
-├── README.md           # Este archivo
-└── .claude/
-    └── launch.json     # Configuración para desarrollo local
-```
-
-## 🔄 Flujo de Datos
-
-### Transacciones
-1. Usuario registra un gasto/ingreso
-2. Sistema crea registro con ID único
-3. Se almacena en localStorage
-4. Dashboard se actualiza automáticamente
-5. Gráficos se recalculan
-
-### Cálculo de KPIs
-- **INGRESOS**: Suma de todos los ingresos del mes
-- **EGRESOS**: Suma de gastos del mes (no incluye abonos a metas)
-- **BALANCE**: INGRESOS - EGRESOS
-- **TASA AHORRO**: (ABONOS A METAS / INGRESOS) * 100
-- **SALDO DISPONIBLE**: Suma de saldos de todas las cuentas
-- **TOTAL AHORROS**: Suma de saldos de metas de ahorro
-
-## 🎨 Temas y Estilos
-
-### Variables CSS Principales
-- Colores de marca: Gradiente azul-morado
-- Responsive breakpoints: 768px (tablet), 480px (mobile)
-- Paleta de colores para transacciones: Verde (Ingreso), Rojo (Egreso), Naranja (Deuda)
-
-### Iconografía
-- Emojis para navegación rápida
-- Códigos de color para tipos de transacción
-- Barras de progreso para metas y deudas
-
-## 🛠️ Desarrollo
-
-### Requisitos
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
-- Servidor local (para desarrollo)
-
-### Servidor de Desarrollo
 ```bash
 python3 -m http.server 8000
-# Luego acceder a http://localhost:8000
+# abre http://localhost:8000
 ```
 
-## 🔒 Seguridad y Privacidad
+1. En **Cuentas** agrega tus cuentas y tarjetas.
+2. En **Configuración** crea tus categorías.
+3. Registra movimientos. (Opcional) conecta la nube en **Configuración → Base de datos**.
 
-- **100% Local**: Los datos nunca dejan tu navegador
-- **Sin cuentas**: No requiere registro o login
-- **Privado**: Cada usuario tiene su propia instancia
-- **Sincronización**: Optional con Google Sheets (público)
+## 📂 Estructura
 
-## 📋 Categorías Estándar
+```
+index.html · manifest.json · service-worker.js · offline.html   (raíz: scope de la PWA)
+src/
+├── main.js                  arranque: DataService, vistas, migración
+├── core/                    utilidades, router, menú móvil, modal de formularios, toasts
+├── services/
+│   ├── data-service.js      ÚNICA API de datos para los componentes (+ sync/reconciliación)
+│   ├── config-service.js    proveedor y credenciales (localStorage del dispositivo)
+│   ├── export-service.js    reporte del mes → CSV / XLSX / PDF (lógica separada de la UI)
+│   └── providers/           local.js · firebase.js · sheets.js  (mismo contrato)
+├── domain/
+│   ├── ledger.js            todo lo calculado: saldos, tarjetas e intereses, metas, deudas
+│   ├── transactions.js      reglas de crear/editar/eliminar movimientos
+│   ├── accounts.js          reglas de cuentas y tarjetas
+│   └── migrations.js        paso a totales calculados (idempotente)
+├── features/                un componente por vista: dashboard, accounts, expenses, income,
+│                            debts, savings, planning, transactions, settings
+└── styles/                  main.css · components.css
+google-apps-script/Code.gs   backend de Google Sheets
+docs/                        guías (Firebase, Google Sheets, PWA) y arquitectura de sincronización
+tests/                       pruebas (node --test)
+```
 
-### Gastos (Egresos)
-- Alimentación
-- Transporte
-- Salud
-- Entretenimiento
-- Servicios
-- Otros
+## ☁️ Sincronización
 
-### Ingresos
-- Nomina/Salario (Principal)
-- Bonificación/Extra (Secundario)
-- Inversiones/Rentas
-- Otros Ingresos
+Resumen (detalle en [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md)):
 
-## 🚀 Mejoras Futuras Sugeridas
+| Modo | Cómo | Guía |
+|---|---|---|
+| Solo local | Sin configurar nada | — |
+| Firebase | Tiempo real (Firestore) | [docs/firebase-guide.html](docs/firebase-guide.html) |
+| Google Sheets | Apps Script + una URL; sondeo cada ~4 s | [docs/google-sheets-guide.html](docs/google-sheets-guide.html) |
 
-### Corto Plazo
-- [ ] Importar datos desde CSV
-- [ ] Más opciones de gráficos (Línea, Comparativa)
-- [ ] Alertas por límite de presupuesto
-- [ ] Notas en transacciones
+Los componentes siempre usan los mismos métodos (`DataService.save / patch / remove / ...`) sin importar la base de datos elegida. Sin conexión los cambios se guardan y se envían al reconectar; si dos dispositivos editan lo mismo gana el cambio más reciente.
 
-### Mediano Plazo
-- [ ] Proyecciones de presupuesto
-- [ ] Análisis de tendencias
-- [ ] Categorización automática
-- [ ] Búsqueda avanzada
-- [ ] Filtros más complejos
+## 🧪 Pruebas
 
-### Largo Plazo
-- [ ] PWA (Progressive Web App)
-- [ ] Soporte multimoneda
-- [ ] Sincronización en nube (Firebase/Supabase)
-- [ ] App móvil nativa
-- [ ] Integración con APIs bancarias reales
-- [ ] Análisis de patrones de gasto
+```bash
+node --test
+```
 
-## 📞 Soporte
+## 📱 PWA
 
-### Para Reportar Bugs
-1. Abre DevTools (F12)
-2. Revisa la consola por errores
-3. Reporta con:
-   - Descripción del problema
-   - Pasos para reproducir
-   - Error de consola (si existe)
-   - Navegador y versión
+Ver [docs/PWA_INSTALACION.md](docs/PWA_INSTALACION.md). El service worker usa *network-first*: con red siempre toma la versión más nueva; sin red sirve la caché.
 
-### Para Sugerencias
-- Crea un issue en el repositorio
-- Describe el caso de uso
-- Proporciona ejemplos
+## 🔒 Privacidad
 
-## 📄 Licencia
-
-Este proyecto es de código abierto y está disponible bajo licencia MIT.
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Por favor:
-1. Fork el proyecto
-2. Crea una rama para tu feature
-3. Commit con mensajes descriptivos
-4. Push a la rama
-5. Abre un Pull Request
-
----
-
-**Versión**: 1.0  
-**Última actualización**: 2026-10-06  
-**Estado**: Activo y en desarrollo
+Tus datos viven en tu dispositivo. Sólo salen si configuras Firebase o Google Sheets, y en ese caso van a **tu** proyecto/hoja. La URL del Apps Script y las credenciales de Firebase se guardan únicamente en el `localStorage` de cada dispositivo.

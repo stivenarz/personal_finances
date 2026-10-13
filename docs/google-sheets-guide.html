@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectar Google Sheets - Guía Paso a Paso</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .step {
+            margin-bottom: 40px;
+            border-left: 4px solid #667eea;
+            padding-left: 25px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: bold;
+            margin-left: -45px;
+            margin-right: 15px;
+        }
+        .step h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .step p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .step ol, .step ul {
+            margin-left: 20px;
+            color: #666;
+            line-height: 1.8;
+        }
+        .step li {
+            margin-bottom: 8px;
+        }
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            color: #333;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        .btn-secondary:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #155724;
+        }
+        .footer {
+            background: #f9f9f9;
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .screenshot {
+            width: 100%;
+            max-width: 500px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Conectar Google Sheets</h1>
+            <p>Usa una hoja de cálculo de Google como base de datos sincronizada entre tus dispositivos</p>
+        </div>
+
+        <div class="content">
+            <div class="warning">
+                <strong>Antes de empezar:</strong> necesitas una cuenta de Google. Tus datos quedan en <em>tu</em> hoja de cálculo, en tu Drive. Quien tenga la URL de la aplicación web puede leer y escribir esos datos: no la compartas.
+            </div>
+
+            <div class="step">
+                <span class="step-number">1</span>
+                <h3>Crea la hoja de cálculo</h3>
+                <ol>
+                    <li>Ve a <a href="https://sheets.new" target="_blank">sheets.new</a> (crea una hoja en blanco)</li>
+                    <li>Ponle un nombre, por ejemplo <span class="highlight">Finanzas Personales</span></li>
+                    <li>No necesitas crear pestañas ni columnas: el script las crea solo</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <h3>Abre Apps Script</h3>
+                <ol>
+                    <li>En la hoja, menú <span class="highlight">Extensiones → Apps Script</span></li>
+                    <li>Se abre el editor con un archivo <span class="highlight">Código.gs</span> (o <span class="highlight">Code.gs</span>)</li>
+                    <li>Borra todo su contenido</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <h3>Pega el script del backend</h3>
+                <p>Copia el contenido completo del archivo <span class="highlight">google-apps-script/Code.gs</span> del proyecto (también está abajo) y pégalo en el editor. Luego pulsa 💾 <strong>Guardar</strong>.</p>
+                <details>
+                    <summary style="cursor:pointer;color:#667eea;font-weight:600;margin:10px 0;">Ver el código completo</summary>
+                    <div class="code-block"><pre style="white-space:pre-wrap;font-size:12px;">/**
+ * FINANZAS PERSONALES — Backend en Google Apps Script
+ * ===================================================
+ * Convierte una hoja de cálculo de Google en la base de datos de la app.
+ * Guía paso a paso: docs/google-sheets-guide.html
+ *
+ * Cada colección de la app es una pestaña con las columnas:
+ *   id | updatedAt | deleted | seq | data (JSON del registro)
+ *
+ *  - updatedAt: marca de tiempo (ms) del cliente. Gana la escritura más reciente.
+ *  - deleted:   1 si el registro fue eliminado (se conserva para propagar el borrado).
+ *  - seq:       contador del servidor; permite que todos los dispositivos reciban
+ *               los cambios de forma incremental aunque sus relojes difieran.
+ *
+ * Endpoints (los usa src/services/providers/sheets.js):
+ *   GET  ?action=ping
+ *   GET  ?action=pull&amp;since=&lt;seq&gt;
+ *   POST {action:&#x27;batch&#x27;, ops:[{op:&#x27;save&#x27;|&#x27;patch&#x27;|&#x27;remove&#x27;, c, id, data|fields, updatedAt}]}
+ */
+
+var APP_ID = &#x27;finanzas-sheets&#x27;;
+var COLLECTIONS = [
+  &#x27;accounts&#x27;, &#x27;categories&#x27;, &#x27;transactions&#x27;, &#x27;debts&#x27;, &#x27;debtPayments&#x27;,
+  &#x27;goals&#x27;, &#x27;recurringExpenses&#x27;, &#x27;paymentPlans&#x27;, &#x27;settings&#x27;
+];
+var HEADERS = [&#x27;id&#x27;, &#x27;updatedAt&#x27;, &#x27;deleted&#x27;, &#x27;seq&#x27;, &#x27;data&#x27;];
+
+// ---------------------------------------------------------------- entradas HTTP
+
+function doGet(e) {
+  try {
+    var params = (e &amp;&amp; e.parameter) || {};
+    if (params.action === &#x27;ping&#x27;) return json_({ ok: true, app: APP_ID, version: getVersion_() });
+    if (params.action === &#x27;pull&#x27;) return json_(pull_(Number(params.since) || 0));
+    return json_({ ok: false, error: &#x27;Acción no soportada&#x27; });
+  } catch (err) {
+    return json_({ ok: false, error: String(err &amp;&amp; err.message || err) });
+  }
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(25000);
+    var body = JSON.parse(e.postData.contents);
+    if (body.action !== &#x27;batch&#x27;) return json_({ ok: false, error: &#x27;Acción no soportada&#x27; });
+    return json_(applyBatch_(body.ops || []));
+  } catch (err) {
+    return json_({ ok: false, error: String(err &amp;&amp; err.message || err) });
+  } finally {
+    try { lock.releaseLock(); } catch (ignored) {}
+  }
+}
+
+/** Ejecútala una vez a mano para crear las pestañas y autorizar los permisos. */
+function setup() {
+  COLLECTIONS.forEach(function (name) { getSheet_(name); });
+  Logger.log(&#x27;Listo: pestañas creadas. Ahora despliega como Aplicación web.&#x27;);
+}
+
+// ---------------------------------------------------------------- lectura
+
+function pull_(since) {
+  var version = getVersion_();
+  if (since &gt;= version) return { ok: true, version: version, rows: [] };
+
+  var rows = [];
+  COLLECTIONS.forEach(function (name) {
+    var sheet = getSheet_(name);
+    var last = sheet.getLastRow();
+    if (last &lt; 2) return;
+    var values = sheet.getRange(2, 1, last - 1, HEADERS.length).getValues();
+    values.forEach(function (row) {
+      var seq = Number(row[3]) || 0;
+      if (seq &lt;= since) return;
+      var data = {};
+      try { data = JSON.parse(row[4] || &#x27;{}&#x27;); } catch (ignored) {}
+      rows.push({
+        c: name,
+        id: String(row[0]),
+        updatedAt: Number(row[1]) || 0,
+        deleted: isTrue_(row[2]),
+        seq: seq,
+        data: data
+      });
+    });
+  });
+  return { ok: true, version: version, rows: rows };
+}
+
+// ---------------------------------------------------------------- escritura
+
+function applyBatch_(ops) {
+  var version = getVersion_();
+  var tables = {};
+
+  function table(name) {
+    if (!tables[name]) tables[name] = loadTable_(name);
+    return tables[name];
+  }
+
+  ops.forEach(function (op) {
+    if (COLLECTIONS.indexOf(op.c) &lt; 0 || !op.id) return;
+    var t = table(op.c);
+    var existing = t.index[op.id];
+    var ts = Number(op.updatedAt) || 0;
+
+    if (op.op === &#x27;save&#x27;) {
+      if (existing &amp;&amp; existing.updatedAt &gt; ts) return;
+      version++;
+      write_(t, op.id, ts, false, version, JSON.stringify(op.data || { id: op.id }));
+
+    } else if (op.op === &#x27;patch&#x27;) {
+      if (existing &amp;&amp; existing.deleted) return;
+      var base = existing ? parse_(t.sheet.getRange(existing.row, 5).getValue()) : { id: op.id };
+      var merged = {};
+      Object.keys(base).forEach(function (k) { merged[k] = base[k]; });
+      Object.keys(op.fields || {}).forEach(function (k) { merged[k] = op.fields[k]; });
+      merged.id = op.id;
+      version++;
+      write_(t, op.id, Math.max(existing ? existing.updatedAt : 0, ts), false, version, JSON.stringify(merged));
+
+    } else if (op.op === &#x27;remove&#x27;) {
+      if (existing &amp;&amp; existing.updatedAt &gt; ts) return;
+      var data = existing ? t.sheet.getRange(existing.row, 5).getValue() : &#x27;{}&#x27;;
+      version++;
+      write_(t, op.id, ts, true, version, data || &#x27;{}&#x27;);
+    }
+  });
+
+  setVersion_(version);
+  return { ok: true, version: version };
+}
+
+function loadTable_(name) {
+  var sheet = getSheet_(name);
+  var last = sheet.getLastRow();
+  var index = {};
+  if (last &gt;= 2) {
+    var values = sheet.getRange(2, 1, last - 1, 4).getValues();
+    values.forEach(function (row, i) {
+      index[String(row[0])] = { row: i + 2, updatedAt: Number(row[1]) || 0, deleted: isTrue_(row[2]) };
+    });
+  }
+  return { sheet: sheet, index: index, next: Math.max(last, 1) + 1 };
+}
+
+function write_(t, id, updatedAt, deleted, seq, dataJson) {
+  var existing = t.index[id];
+  var row = existing ? existing.row : t.next++;
+  t.sheet.getRange(row, 1, 1, HEADERS.length).setValues([[id, updatedAt, deleted ? 1 : 0, seq, dataJson]]);
+  t.index[id] = { row: row, updatedAt: updatedAt, deleted: deleted };
+}
+
+// ---------------------------------------------------------------- utilidades
+
+function getSheet_(name) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(name);
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight(&#x27;bold&#x27;);
+    sheet.getRange(&#x27;A:A&#x27;).setNumberFormat(&#x27;@&#x27;);
+    sheet.getRange(&#x27;E:E&#x27;).setNumberFormat(&#x27;@&#x27;);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getVersion_() {
+  return Number(PropertiesService.getScriptProperties().getProperty(&#x27;version&#x27;)) || 0;
+}
+
+function setVersion_(version) {
+  PropertiesService.getScriptProperties().setProperty(&#x27;version&#x27;, String(version));
+}
+
+function parse_(text) {
+  try { return JSON.parse(text || &#x27;{}&#x27;); } catch (ignored) { return {}; }
+}
+
+function isTrue_(value) {
+  return value === true || value === 1 || value === &#x27;1&#x27; || value === &#x27;TRUE&#x27;;
+}
+
+function json_(object) {
+  return ContentService.createTextOutput(JSON.stringify(object)).setMimeType(ContentService.MimeType.JSON);
+}
+</pre></div>
+                </details>
+            </div>
+
+            <div class="step">
+                <span class="step-number">4</span>
+                <h3>Autoriza el script (una sola vez)</h3>
+                <ol>
+                    <li>En el editor, arriba, elige la función <span class="highlight">setup</span> y pulsa <span class="highlight">▶ Ejecutar</span></li>
+                    <li>Google pedirá permisos: <span class="highlight">Revisar permisos</span> → elige tu cuenta → <span class="highlight">Avanzado</span> → <span class="highlight">Ir a (proyecto) (no seguro)</span> → <span class="highlight">Permitir</span></li>
+                    <li>Es normal que diga "no seguro": el script es tuyo y sólo accede a esta hoja</li>
+                    <li>Al terminar, vuelve a la hoja: verás las pestañas <em>accounts, categories, transactions...</em> creadas</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <span class="step-number">5</span>
+                <h3>Despliégalo como aplicación web</h3>
+                <ol>
+                    <li>Arriba a la derecha: <span class="highlight">Implementar → Nueva implementación</span></li>
+                    <li>Pulsa el engranaje ⚙️ y elige <span class="highlight">Aplicación web</span></li>
+                    <li><strong>Ejecutar como:</strong> <span class="highlight">Yo (tu correo)</span></li>
+                    <li><strong>Quién tiene acceso:</strong> <span class="highlight">Cualquier usuario</span></li>
+                    <li>Pulsa <span class="highlight">Implementar</span> y copia la <strong>URL de la aplicación web</strong> (termina en <span class="highlight">/exec</span>)</li>
+                </ol>
+                <div class="warning">
+                    <strong>Si cambias el código del script</strong> debes crear una <em>nueva versión</em> (Implementar → Administrar implementaciones → ✏️ → Versión: Nueva versión). La URL se mantiene.
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">6</span>
+                <h3>Conecta la app</h3>
+                <ol>
+                    <li>Abre la app → <span class="highlight">Configuración → Base de datos y sincronización</span></li>
+                    <li>En <span class="highlight">Dónde guardar tus datos</span> elige <span class="highlight">Google Sheets (Apps Script)</span></li>
+                    <li>Pega la URL en <span class="highlight">URL de la aplicación web</span></li>
+                    <li>Pulsa <span class="highlight">Probar conexión</span>: debe decir "Conexión exitosa con Google Sheets"</li>
+                    <li>Pulsa <span class="highlight">Guardar y conectar</span></li>
+                </ol>
+                <div class="success">
+                    <strong>✅ En el menú lateral verás "Google Sheets · Conectado y sincronizado".</strong> Repite el paso 6 en cada dispositivo con la <em>misma URL</em>.
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">7</span>
+                <h3>Cómo funciona la sincronización</h3>
+                <ul>
+                    <li><strong>Local primero:</strong> todo se guarda siempre en tu dispositivo; la app funciona sin conexión.</li>
+                    <li><strong>En vivo:</strong> cada ~4 segundos (y al volver a la app o recuperar la conexión) se envían tus cambios y se reciben los de tus otros dispositivos. Con la app en segundo plano la revisión es cada minuto.</li>
+                    <li><strong>Sin conexión:</strong> los cambios quedan en una cola y se envían al reconectar, sin duplicarse.</li>
+                    <li><strong>Conflictos:</strong> si dos dispositivos editan el mismo registro, gana el cambio más reciente (los campos distintos se conservan).</li>
+                    <li><strong>Saldos calculados:</strong> en la hoja sólo hay movimientos y datos base; saldos, ahorros y deudas se calculan en la app, por eso nunca se desajustan entre dispositivos.</li>
+                </ul>
+                <p>Cada pestaña de la hoja tiene las columnas <span class="highlight">id | updatedAt | deleted | seq | data</span>. No edites esas columnas a mano: usa la app.</p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">8</span>
+                <h3>Problemas frecuentes</h3>
+                <ul>
+                    <li><strong>"Respuesta inválida"</strong>: la URL no es la de la implementación (/exec) o el acceso no es "Cualquier usuario".</li>
+                    <li><strong>"Error de sincronización"</strong> tras editar el script: crea una nueva versión de la implementación.</li>
+                    <li><strong>Límites de Google:</strong> el uso personal queda muy por debajo de las cuotas gratuitas de Apps Script.</li>
+                    <li>Para desconectarte, elige <span class="highlight">Solo local</span> en la app: tus datos se conservan en el dispositivo.</li>
+                </ul>
+            </div>
+
+            <div class="button-group">
+                <a href="https://sheets.new" target="_blank" class="btn btn-primary">Crear hoja de cálculo</a>
+                <button onclick="window.close()" class="btn btn-secondary">Cerrar Guía</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>💡 <strong>Tip:</strong> puedes cambiar entre Firebase, Google Sheets y modo local cuando quieras desde Configuración.</p>
+        </div>
+    </div>
+</body>
+</html>
