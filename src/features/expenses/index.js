@@ -69,7 +69,7 @@ export function render() {
                 <div class="transaction-date">${formatDate(t.date)}</div>
                 <div class="transaction-desc">${escapeHtml(t.description || 'Sin descripción')}</div>
                 <div class="transaction-category">${escapeHtml(categoryLabel(t))} • ${escapeHtml(account?.name || 'N/A')}</div>
-                <div class="transaction-amount negativo">-$${formatNumber(t.amount)}</div>
+                <div class="transaction-amount negativo" data-fit>-$${formatNumber(t.amount)}</div>
                 <div class="row-actions">
                     ${t.virtual
                         ? '<span class="badge-auto">Automático</span>'

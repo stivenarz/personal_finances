@@ -16,15 +16,15 @@ export function mount(container) {
         <div class="kpi-container savings-kpis">
             <div class="kpi-card" style="border-left-color: #ec4899;">
                 <div class="kpi-icon">🎯</div>
-                <div class="kpi-content"><div class="kpi-label">Total Ahorros</div><div class="kpi-value" data-kpi="total">$0</div></div>
+                <div class="kpi-content"><div class="kpi-label">Total Ahorros</div><div class="kpi-value" data-fit data-kpi="total">$0</div></div>
             </div>
             <div class="kpi-card" style="border-left-color: #06b6d4;">
                 <div class="kpi-icon">📊</div>
-                <div class="kpi-content"><div class="kpi-label">Metas Activas</div><div class="kpi-value" data-kpi="active">0</div></div>
+                <div class="kpi-content"><div class="kpi-label">Metas Activas</div><div class="kpi-value" data-fit data-kpi="active">0</div></div>
             </div>
             <div class="kpi-card" style="border-left-color: #10b981;">
                 <div class="kpi-icon">✅</div>
-                <div class="kpi-content"><div class="kpi-label">Metas Completadas</div><div class="kpi-value" data-kpi="done">0</div></div>
+                <div class="kpi-content"><div class="kpi-label">Metas Completadas</div><div class="kpi-value" data-fit data-kpi="done">0</div></div>
             </div>
         </div>
         <div class="list-section">
@@ -186,7 +186,7 @@ export function render() {
                 <div class="goal-card-top">
                     <div class="goal-card-info">
                         <h4>${escapeHtml(goal.description)}</h4>
-                        <p>$${formatNumber(saved)} / $${formatNumber(goal.targetAmount)}</p>
+                        <p data-fit>$${formatNumber(saved)} / $${formatNumber(goal.targetAmount)}</p>
                         ${daysLeft !== null ? `<p class="goal-card-deadline">Plazo: ${daysLeft} días</p>` : ''}
                     </div>
                     <div class="goal-card-actions">

@@ -78,7 +78,7 @@ export function render() {
                     <div class="tx-meta">${escapeHtml(owner?.name || 'N/A')} • ${escapeHtml(categoryLabel(t))}</div>
                 </div>
                 <div class="tx-meta">${formatDate(t.date)}</div>
-                <div class="tx-amount" style="color: ${color};">${sign}$${formatNumber(t.amount)}</div>
+                <div class="tx-amount" data-fit style="color: ${color};">${sign}$${formatNumber(t.amount)}</div>
                 <div class="row-actions">
                     ${t.virtual
                         ? '<span class="badge-auto">Automático</span>'

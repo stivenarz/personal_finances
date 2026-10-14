@@ -1,3 +1,5 @@
+import { fitText } from './ui.js';
+
 const views = new Map();
 let active = null;
 
@@ -28,12 +30,14 @@ export function showView(id) {
     document.getElementById('view-title').textContent = views.get(id).title;
 
     ensureMounted(id).feature.render();
+    fitText(document.getElementById(`view-${id}`));
 }
 
 /** Repinta sólo la vista visible. */
 export function renderActive() {
     if (!active) return;
     views.get(active)?.feature.render();
+    fitText(document.getElementById(`view-${active}`));
 }
 
 export function setupNavigation() {

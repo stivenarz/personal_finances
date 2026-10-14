@@ -64,7 +64,7 @@ export function render() {
                 <div class="transaction-date">${formatDate(t.date)}</div>
                 <div class="transaction-desc">${escapeHtml(t.description || '')}</div>
                 <div class="transaction-category">${escapeHtml(t.incomeType || t.category || '')} • ${escapeHtml(account?.name || 'N/A')}</div>
-                <div class="transaction-amount positivo">+$${formatNumber(t.amount)}</div>
+                <div class="transaction-amount positivo" data-fit>+$${formatNumber(t.amount)}</div>
                 <div class="row-actions">
                     <button class="btn btn-secondary" data-action="edit" data-id="${escapeHtml(t.id)}">Editar</button>
                     <button class="btn btn-danger" data-action="delete" data-id="${escapeHtml(t.id)}">Eliminar</button>

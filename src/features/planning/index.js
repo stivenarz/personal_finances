@@ -354,11 +354,11 @@ function renderKpis(selected, base, ym) {
     const realIncome = realIncomeThisMonth(ym);
 
     root.querySelector('[data-kpis]').innerHTML = `
-        <div class="plan-kpi"><span>Ingresos proyectados</span><strong>$${formatNumber(selected.totalIncome)}</strong></div>
-        <div class="plan-kpi"><span>Obligaciones del mes</span><strong>$${formatNumber(selected.totalOut)}</strong></div>
-        <div class="plan-kpi"><span>Margen</span><strong class="${selected.margin < 0 ? 'neg' : 'pos'}">$${formatNumber(selected.margin)}</strong></div>
-        <div class="plan-kpi"><span>Saldo mínimo</span><strong class="${selected.minBalance < 0 ? 'neg' : ''}">$${formatNumber(selected.minBalance)}${selected.minDay ? ` (día ${selected.minDay})` : ''}</strong></div>
-        <div class="plan-kpi"><span>Ingreso real registrado</span><strong>$${formatNumber(realIncome)}</strong></div>
+        <div class="plan-kpi"><span>Ingresos proyectados</span><strong data-fit>$${formatNumber(selected.totalIncome)}</strong></div>
+        <div class="plan-kpi"><span>Obligaciones del mes</span><strong data-fit>$${formatNumber(selected.totalOut)}</strong></div>
+        <div class="plan-kpi"><span>Margen</span><strong data-fit class="${selected.margin < 0 ? 'neg' : 'pos'}">$${formatNumber(selected.margin)}</strong></div>
+        <div class="plan-kpi"><span>Saldo mínimo</span><strong data-fit class="${selected.minBalance < 0 ? 'neg' : ''}">$${formatNumber(selected.minBalance)}${selected.minDay ? ` (día ${selected.minDay})` : ''}</strong></div>
+        <div class="plan-kpi"><span>Ingreso real registrado</span><strong data-fit>$${formatNumber(realIncome)}</strong></div>
     `;
 
     const messages = [];

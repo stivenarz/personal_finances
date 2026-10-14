@@ -17,7 +17,7 @@ const kpi = (color, icon, label, key, initial = '$0') => `
         <div class="kpi-icon">${icon}</div>
         <div class="kpi-content">
             <div class="kpi-label">${label}</div>
-            <div class="kpi-value" data-kpi="${key}">${initial}</div>
+            <div class="kpi-value" data-fit data-kpi="${key}">${initial}</div>
         </div>
     </div>`;
 
@@ -103,7 +103,7 @@ function renderBudget(monthTransactions) {
             <div class="budget-item">
                 <span class="budget-item-name">${escapeHtml(row.name)}</span>
                 <div class="budget-item-progress"><div class="budget-item-bar ${status}" style="width: ${Math.min(percentage, 100)}%"></div></div>
-                <span class="budget-item-amount">$${formatNumber(row.spent)} / $${formatNumber(row.budget)}</span>
+                <span class="budget-item-amount" data-fit>$${formatNumber(row.spent)} / $${formatNumber(row.budget)}</span>
             </div>`;
     }).join('') || '<p class="empty-state">Sin categorías con presupuesto</p>';
 }
@@ -130,7 +130,7 @@ function renderUpcoming() {
         <div class="debt-item">
             <span class="debt-item-name">${escapeHtml(item.name)}</span>
             <span class="debt-item-status ${item.days <= 2 ? 'urgent' : 'alert'}">${item.days === 0 ? 'Hoy' : `${item.days} días`}</span>
-            <span class="debt-amount">$${formatNumber(item.amount)}</span>
+            <span class="debt-amount" data-fit>$${formatNumber(item.amount)}</span>
         </div>`).join('') || '<p class="empty-state">Sin pagos próximos</p>';
 }
 

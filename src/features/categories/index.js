@@ -71,7 +71,7 @@ export function render() {
                     <div class="category-name">${escapeHtml(cat.name)}</div>
                     <div class="category-type">${escapeHtml(cat.type)}</div>
                 </div>
-                <div class="category-budget">$${formatNumber(cat.budget)}</div>
+                <div class="category-budget" data-fit>$${formatNumber(cat.budget)}</div>
                 <div class="row-actions">
                     <button class="btn btn-secondary" data-action="edit" data-id="${escapeHtml(cat.id)}">Editar</button>
                     <button class="btn btn-danger" data-action="delete" data-id="${escapeHtml(cat.id)}">Eliminar</button>

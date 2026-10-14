@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'finanzas-v28';
-const RUNTIME_CACHE = 'finanzas-runtime-v28';
+const CACHE_VERSION = 'finanzas-v30';
+const RUNTIME_CACHE = 'finanzas-runtime-v30';
 
 const CORE_ASSETS = [
   './',

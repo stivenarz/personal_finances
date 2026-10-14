@@ -236,12 +236,13 @@ body {
 
 .plan-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 20px;
 }
 
 .plan-card {
     background: var(--bg-primary);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -302,6 +303,7 @@ body {
     gap: 12px;
     padding: 12px;
     background: var(--bg-secondary);
+    border: 1px solid var(--border);
     border-radius: 8px;
 }
 
@@ -324,18 +326,20 @@ body {
 
 .plan-kpis {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: 12px;
     margin-bottom: 12px;
 }
 
 .plan-kpi {
     background: var(--bg-secondary);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .plan-kpi span {
@@ -577,7 +581,9 @@ body {
 
 .views-container {
     flex: 1;
+    overflow-x: hidden;
     overflow-y: auto;
+    overflow-wrap: anywhere;
     padding: 30px 30px 30px 30px;
 }
 
@@ -597,26 +603,31 @@ body {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 20px;
 }
 
 .kpi-container {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    grid-auto-rows: 1fr;
     gap: 15px;
 }
 
 .kpi-card {
     background: var(--bg-primary);
-    padding: 20px;
+    padding: 14px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     border-left: 5px solid #3b82f6;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    display: flex;
-    gap: 15px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "icon label" "value value";
     align-items: center;
+    gap: 6px 10px;
+    min-width: 0;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -626,31 +637,36 @@ body {
 }
 
 .kpi-icon {
-    font-size: 32px;
+    grid-area: icon;
+    font-size: 24px;
+    line-height: 1;
 }
 
 .kpi-content {
-    flex: 1;
+    display: contents;
 }
 
 .kpi-label {
-    font-size: 12px;
+    grid-area: label;
+    line-height: 1.25;
+    font-size: 11px;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .kpi-value {
-    font-size: 20px;
+    grid-area: value;
+    font-size: 22px;
+    line-height: 1.2;
     font-weight: 700;
     color: var(--text-primary);
-    margin-top: 5px;
 }
 
 .charts-container {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
     gap: 20px;
 }
 
@@ -658,6 +674,7 @@ body {
     background: var(--bg-primary);
     padding: 25px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -677,6 +694,7 @@ body {
     background: var(--bg-primary);
     padding: 25px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -766,6 +784,7 @@ body {
     background: var(--bg-primary);
     padding: 30px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     margin-bottom: 25px;
 }
@@ -778,7 +797,7 @@ body {
 
 .form-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
     gap: 20px;
 }
 
@@ -878,7 +897,7 @@ body {
 
 .filter-controls {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -900,6 +919,7 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     align-items: center;
+    border: 1px solid var(--border);
     border-left: 4px solid var(--primary);
 }
 
@@ -911,6 +931,7 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     align-items: center;
+    border: 1px solid var(--border);
     border-left: 4px solid var(--primary);
     transition: all 0.3s ease;
 }
@@ -962,7 +983,7 @@ body {
 
 .debt-details-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
     gap: 20px;
 }
 
@@ -970,7 +991,9 @@ body {
     background: var(--bg-secondary);
     padding: 20px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     border-left: 4px solid var(--danger);
+    min-width: 0;
 }
 
 .debt-detail-header {
@@ -1050,7 +1073,9 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     align-items: center;
+    border: 1px solid var(--border);
     border-left: 4px solid var(--primary);
+    min-width: 0;
 }
 
 .account-item > :first-child {
@@ -1078,6 +1103,7 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     align-items: center;
+    border: 1px solid var(--border);
     border-left: 4px solid var(--primary);
 }
 
@@ -1111,7 +1137,7 @@ body {
 
 .config-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
     gap: 30px;
 }
 
@@ -1119,6 +1145,7 @@ body {
     background: var(--bg-primary);
     padding: 25px;
     border-radius: 12px;
+    border: 1px solid var(--border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -1285,21 +1312,21 @@ body {
     }
 
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .charts-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .form-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .transaction-item,
     .transaction-row {
-        grid-template-columns: 1fr;
-        border-left: none;
+        grid-template-columns: minmax(0, 1fr);
+        border-left: 1px solid var(--border);
         border-top: 4px solid var(--primary);
     }
 
@@ -1312,11 +1339,11 @@ body {
     }
 
     .debt-details-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .config-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .budget-item,
@@ -1324,7 +1351,7 @@ body {
     .goal-item,
     .account-item,
     .category-item {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .budget-item-amount,
@@ -1358,7 +1385,7 @@ body {
     }
 
     .kpi-container {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .header-left h2 {
@@ -1370,7 +1397,22 @@ body {
     }
 
     .filter-controls {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .row-actions {
+        justify-content: stretch;
+    }
+
+    .goal-card-actions {
+        flex: 1 1 100%;
+    }
+
+    .row-actions .btn,
+    .goal-card-actions .btn {
+        flex: 1 1 auto;
+        padding: 8px 6px;
+        font-size: 12px;
     }
 
     .list-section,

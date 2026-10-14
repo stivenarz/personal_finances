@@ -14,11 +14,11 @@ export function mount(container) {
         <div class="kpi-container accounts-kpis">
             <div class="kpi-card" style="border-left-color: #8b5cf6;">
                 <div class="kpi-icon">🏦</div>
-                <div class="kpi-content"><div class="kpi-label">Saldo en cuentas</div><div class="kpi-value" data-kpi="available">$0</div></div>
+                <div class="kpi-content"><div class="kpi-label">Saldo en cuentas</div><div class="kpi-value" data-fit data-kpi="available">$0</div></div>
             </div>
             <div class="kpi-card" style="border-left-color: #ef4444;">
                 <div class="kpi-icon">💳</div>
-                <div class="kpi-content"><div class="kpi-label">Deuda en tarjetas</div><div class="kpi-value" data-kpi="debt">$0</div></div>
+                <div class="kpi-content"><div class="kpi-label">Deuda en tarjetas</div><div class="kpi-value" data-fit data-kpi="debt">$0</div></div>
             </div>
         </div>
         <div class="list-section">
@@ -58,7 +58,7 @@ function renderCard(account) {
                     <div class="account-name">💳 ${escapeHtml(account.name)}</div>
                     <div class="account-type">Tarjeta de crédito</div>
                 </div>
-                <div class="account-balance ${info.owed > 0 ? 'negative' : ''}">${info.owed > 0 ? '-' : ''}${formatMoney(info.owed).replace('-', '')}</div>
+                <div data-fit class="account-balance ${info.owed > 0 ? 'negative' : ''}">${info.owed > 0 ? '-' : ''}${formatMoney(info.owed).replace('-', '')}</div>
             </div>
             <div class="cc-usage" title="Cupo utilizado">
                 <div class="cc-usage-bar"><div class="cc-usage-fill ${info.usage > 85 ? 'high' : ''}" style="width: ${info.usage}%"></div></div>
@@ -97,7 +97,7 @@ function renderAccount(account) {
                     <div class="account-name">${escapeHtml(account.name)}</div>
                     <div class="account-type">${escapeHtml(account.type)}</div>
                 </div>
-                <div class="account-balance ${balance < 0 ? 'negative' : ''}">${formatMoney(balance)}</div>
+                <div data-fit class="account-balance ${balance < 0 ? 'negative' : ''}">${formatMoney(balance)}</div>
             </div>
             <div class="row-actions">
                 <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${id}">✏️ Editar</button>
