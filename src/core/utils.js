@@ -11,6 +11,33 @@ export const formatMoney = (num) => {
     return `${value < 0 ? '-' : ''}$${formatNumber(Math.abs(value))}`;
 };
 
+/**
+ * Limpia texto numérico mientras se escribe: acepta coma o punto como separador decimal (el teclado numérico
+ * de iOS en español sólo trae la coma), deja un único separador y quita todo lo que no sea dígito.
+ * Un número pegado con separadores de miles (1.500.000) se normaliza a 1500000.
+ * @param {{decimals?: boolean, negative?: boolean}} options `negative` permite un "-" al inicio.
+ */
+export function sanitizeDecimal(text, { decimals = true, negative = false } = {}) {
+    let out = String(text ?? '').trim();
+    if (/^\d{1,3}([.,]\d{3}){2,}$/.test(out)) out = out.replace(/[.,]/g, '');
+    out = out.replace(/,/g, '.').replace(negative ? /[^\d.-]/g : /[^\d.]/g, '');
+    if (!decimals) out = out.replace(/\./g, '');
+    else {
+        const first = out.indexOf('.');
+        if (first >= 0) out = out.slice(0, first + 1) + out.slice(first + 1).replace(/\./g, '');
+    }
+    if (negative) out = out.replace(/(?!^)-/g, '');
+    return out;
+}
+
+/** Convierte texto numérico (con coma o punto decimal) a número: `null` si no hay cifras, `NaN` si sólo quedan signos sueltos ('-', '.'). */
+export function parseDecimal(text) {
+    const clean = sanitizeDecimal(text, { negative: true });
+    if (clean === '') return null;
+    const number = Number(clean);
+    return Number.isFinite(number) ? number : NaN;
+}
+
 export function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'

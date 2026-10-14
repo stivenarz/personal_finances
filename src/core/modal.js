@@ -1,4 +1,4 @@
-import { escapeHtml } from './utils.js';
+import { escapeHtml, parseDecimal, sanitizeDecimal } from './utils.js';
 import { showNotification } from './notifications.js';
 
 function renderField(field) {
@@ -16,9 +16,11 @@ function renderField(field) {
     } else {
         const attrs = [`type="${field.type || 'text'}"`];
         if (field.type === 'number') {
-            attrs.push(`step="${field.step ?? 'any'}"`, 'inputmode="decimal"');
-            if (field.min !== undefined) attrs.push(`min="${field.min}"`);
-            if (field.max !== undefined) attrs.push(`max="${field.max}"`);
+            const integer = field.step === 1;
+            attrs[0] = 'type="text"';
+            attrs.push(`inputmode="${integer ? 'numeric' : 'decimal'}"`, 'autocomplete="off"', 'data-number');
+            if (integer) attrs.push('data-integer');
+            if (field.min === undefined) attrs.push('data-negative');
         }
         if (field.placeholder) attrs.push(`placeholder="${escapeHtml(field.placeholder)}"`);
         control = `<input id="${id}" name="${field.name}" ${attrs.join(' ')} value="${escapeHtml(field.value ?? '')}" ${disabled}>`;
@@ -32,7 +34,7 @@ function readValues(form, fields) {
     fields.forEach(field => {
         const el = form.elements[field.name];
         if (!el) return;
-        if (field.type === 'number') values[field.name] = el.value === '' ? null : Number(el.value);
+        if (field.type === 'number') values[field.name] = parseDecimal(el.value);
         else values[field.name] = el.value;
     });
     return values;
@@ -95,6 +97,12 @@ export function openFormModal({ title, note = '', fields, submitLabel = 'Guardar
             wrapper.dataset.hidden = visible ? '' : '1';
         });
     };
+    form.addEventListener('input', (e) => {
+        const el = e.target;
+        if (!el.hasAttribute('data-number')) return;
+        const clean = sanitizeDecimal(el.value, { decimals: !el.hasAttribute('data-integer'), negative: el.hasAttribute('data-negative') });
+        if (clean !== el.value) el.value = clean;
+    });
     form.addEventListener('input', refreshVisibility);
     form.addEventListener('change', refreshVisibility);
     refreshVisibility();
