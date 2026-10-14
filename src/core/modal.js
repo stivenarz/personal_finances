@@ -1,4 +1,4 @@
-import { escapeHtml, parseDecimal, sanitizeDecimal } from './utils.js';
+import { escapeHtml, parseDecimal, sanitizeDecimal, toggleSign } from './utils.js';
 import { showNotification } from './notifications.js';
 
 function renderField(field) {
@@ -24,6 +24,10 @@ function renderField(field) {
         }
         if (field.placeholder) attrs.push(`placeholder="${escapeHtml(field.placeholder)}"`);
         control = `<input id="${id}" name="${field.name}" ${attrs.join(' ')} value="${escapeHtml(field.value ?? '')}" ${disabled}>`;
+        if (field.type === 'number' && field.min === undefined) {
+            control = `<div class="modal-input-group">${control}<button type="button" class="sign-toggle" data-sign-toggle
+                title="Cambiar signo (positivo o negativo)" aria-label="Cambiar signo (positivo o negativo)" ${disabled}>±</button></div>`;
+        }
     }
 
     return `<div class="modal-field" data-field="${field.name}">${label}${control}${hint}</div>`;
@@ -49,6 +53,8 @@ function readValues(form, fields) {
  *   min?: number, max?: number, step?: number, placeholder?: string, hint?: string,
  *   visibleIf?: (values: Object) => boolean}>} options.fields
  *   Un campo con `visibleIf` falso se oculta, no se valida y llega como `undefined`.
+ *   Los campos `number` sin `min` admiten valores negativos y muestran un botón ± para cambiar el signo
+ *   (el teclado numérico de iOS no trae el signo menos).
  * @param {(values: Object) => (string|void|Promise<string|void>)} options.onSubmit
  *   Si devuelve un texto, se muestra como error y el modal sigue abierto; en cualquier otro caso se cierra.
  * @returns {{close: () => void}}
@@ -97,12 +103,31 @@ export function openFormModal({ title, note = '', fields, submitLabel = 'Guardar
             wrapper.dataset.hidden = visible ? '' : '1';
         });
     };
+    const markSign = (input) => {
+        const negative = input.value.startsWith('-');
+        input.classList.toggle('is-negative', negative);
+        input.parentElement.querySelector('[data-sign-toggle]')?.classList.toggle('active', negative);
+    };
     form.addEventListener('input', (e) => {
         const el = e.target;
         if (!el.hasAttribute('data-number')) return;
         const clean = sanitizeDecimal(el.value, { decimals: !el.hasAttribute('data-integer'), negative: el.hasAttribute('data-negative') });
         if (clean !== el.value) el.value = clean;
+        markSign(el);
     });
+    form.addEventListener('mousedown', (e) => {
+        if (e.target.closest('[data-sign-toggle]')) e.preventDefault();
+    });
+    form.addEventListener('click', (e) => {
+        const toggle = e.target.closest('[data-sign-toggle]');
+        if (!toggle) return;
+        const input = toggle.parentElement.querySelector('input');
+        input.value = toggleSign(input.value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(input.value.length, input.value.length);
+    });
+    form.querySelectorAll('[data-number][data-negative]').forEach(markSign);
     form.addEventListener('input', refreshVisibility);
     form.addEventListener('change', refreshVisibility);
     refreshVisibility();

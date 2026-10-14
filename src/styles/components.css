@@ -65,6 +65,36 @@
     line-height: 1.4;
 }
 
+.modal-input-group { display: flex; gap: 8px; }
+
+.modal-input-group input { flex: 1 1 auto; min-width: 0; }
+
+.sign-toggle {
+    flex: 0 0 auto;
+    width: 48px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sign-toggle:active { transform: scale(0.95); }
+
+.sign-toggle:disabled { opacity: 0.5; cursor: default; }
+
+.sign-toggle.active {
+    color: var(--danger);
+    background: var(--danger-light);
+    border-color: var(--danger);
+}
+
+.modal-field input.is-negative { color: var(--danger); }
+
 .modal-error {
     margin: 4px 0 0;
     padding: 8px 10px;

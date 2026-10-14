@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const { sanitizeDecimal, parseDecimal } = await import('../src/core/utils.js');
+const { sanitizeDecimal, parseDecimal, toggleSign } = await import('../src/core/utils.js');
 
 test('acepta coma o punto como separador decimal', () => {
     assert.equal(parseDecimal('2,5'), 2.5);
@@ -43,4 +43,12 @@ test('pegar un número con miles (1.500.000) lo normaliza; un solo grupo sigue s
     assert.equal(parseDecimal('12.345.678'), 12345678);
     assert.equal(parseDecimal('1.500'), 1.5);
     assert.equal(parseDecimal('1,500'), 1.5);
+});
+
+test('toggleSign añade o quita el signo menos', () => {
+    assert.equal(toggleSign('500'), '-500');
+    assert.equal(toggleSign('-500'), '500');
+    assert.equal(toggleSign(''), '-');
+    assert.equal(toggleSign('-'), '');
+    assert.equal(parseDecimal(toggleSign('2,5')), -2.5);
 });

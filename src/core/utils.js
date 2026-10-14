@@ -30,6 +30,12 @@ export function sanitizeDecimal(text, { decimals = true, negative = false } = {}
     return out;
 }
 
+/** Invierte el signo de un texto numérico: añade o quita el "-" inicial. */
+export function toggleSign(text) {
+    const value = String(text ?? '').trim();
+    return value.startsWith('-') ? value.slice(1) : `-${value}`;
+}
+
 /** Convierte texto numérico (con coma o punto decimal) a número: `null` si no hay cifras, `NaN` si sólo quedan signos sueltos ('-', '.'). */
 export function parseDecimal(text) {
     const clean = sanitizeDecimal(text, { negative: true });
